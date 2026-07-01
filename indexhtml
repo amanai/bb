@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Bybit Positions Matrix Clean</title>
+<style>
+  :root{
+    color-scheme:dark;
+    --bg:#000;
+    --green:#39ff6a;
+    --green2:#00ff41;
+    --dim:#0b6f28;
+    --line:rgba(57,255,106,.86);
+    --soft:rgba(57,255,106,.14);
+    --text:#51ff7d;
+    --muted:rgba(81,255,125,.62);
+    --red:#ff4d5e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;background:#000;color:var(--text);overflow-x:hidden}
+  body,input,button,select{font-family:"SF Mono",SFMono-Regular,ui-monospace,Menlo,Monaco,Consolas,"Courier New",monospace;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1,"zero" 1;font-weight:300;letter-spacing:-.25px}
+  body{padding:max(18px,env(safe-area-inset-top)) 14px max(22px,env(safe-area-inset-bottom));text-shadow:0 0 10px rgba(57,255,106,.30);background:radial-gradient(circle at 50% 0%,rgba(24,255,82,.10),transparent 38%),linear-gradient(180deg,#020604,#000 70%)}
+  .shade{position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.65));pointer-events:none}
+  .app{max-width:760px;margin:0 auto;padding-bottom:12px}
+  .top{display:none}
+  .clock{font-size:28px;font-weight:500;color:var(--green);line-height:1}
+  .icons{display:none}.battery{display:none}.signal{display:none}.wifi{display:none}
+  .head{display:flex;align-items:center;justify-content:space-between;margin:4px 4px 24px;padding-top:8px}
+  .hleft{font-size:24px;line-height:1.35}.brackets{letter-spacing:1px}.sub{margin-top:8px;font-size:16px;color:var(--green)}
+  .refreshIcon{width:50px;height:50px;border:2px solid var(--line);display:grid;place-items:center;font-size:26px;box-shadow:0 0 18px rgba(57,255,106,.25),inset 0 0 18px rgba(57,255,106,.08);clip-path:polygon(22% 0,78% 0,78% 12%,100% 12%,100% 38%,88% 38%,88% 62%,100% 62%,100% 88%,78% 88%,78% 100%,22% 100%,22% 88%,0 88%,0 62%,12% 62%,12% 38%,0 38%,0 12%,22% 12%)}
+  .time2{text-align:right;font-size:14px;margin-top:10px;color:var(--muted)}
+  .card,.summary,.settings,.bottom{background:rgba(0,10,2,.54);border:1px solid var(--line);box-shadow:0 0 18px rgba(57,255,106,.22),inset 0 0 18px rgba(57,255,106,.05);backdrop-filter:blur(2px)}
+  .summary{margin:0 4px 20px;padding:20px 14px 18px}.sumgrid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid rgba(57,255,106,.44);padding-bottom:13px}.sumcell{text-align:center}.sumcell:first-child{border-right:1px solid rgba(57,255,106,.44)}.label{font-size:14px;color:var(--green);margin-bottom:12px}.big{font-size:25px;color:var(--green);white-space:nowrap}.net{text-align:center;padding-top:14px}.net .big{font-size:22px}.neg{color:var(--red)!important;text-shadow:0 0 10px rgba(255,77,94,.35)}
+  .settings{margin:0 4px 20px;padding:14px;display:none}.settings.show{display:block}.field{margin-bottom:10px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}input,select{width:100%;height:44px;background:rgba(0,0,0,.74);border:1px solid rgba(57,255,106,.55);color:var(--green);border-radius:0;padding:10px;font-size:14px;outline:none}input:focus,select:focus{border-color:var(--green);box-shadow:0 0 14px rgba(57,255,106,.25)}
+  .list{display:flex;flex-direction:column;gap:18px;margin:0 4px}.card{min-height:118px;padding:16px 14px;display:grid;grid-template-columns:74px 1fr;gap:14px}.coinIcon{border-right:1px solid rgba(57,255,106,.55);display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:600;color:var(--green);text-shadow:0 0 18px rgba(57,255,106,.55)}.ctop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.symbol{font-size:24px;color:var(--green);line-height:1}.hedge{font-size:14px;white-space:nowrap;color:var(--green);text-align:right}.rows{margin-top:13px}.r{display:grid;grid-template-columns:76px 1fr;gap:10px;align-items:center;margin:9px 0}.side{font-size:18px;color:var(--green)}.val{text-align:right;font-size:20px;color:var(--green);white-space:nowrap}.mini{font-size:12px;color:var(--muted);margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:8px}.pnlPos{color:var(--green)}.pnlNeg{color:var(--red);text-shadow:0 0 8px rgba(255,77,94,.35)}
+  .empty{margin:25px 4px;padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed rgba(57,255,106,.5);display:none}
+  .status{margin:14px 4px 0;white-space:pre-wrap;color:var(--muted);font-size:12px;line-height:1.35}.status.err{color:#ff8993;text-shadow:0 0 8px rgba(255,77,94,.35)}
+  .info{display:flex;justify-content:flex-end;gap:10px;margin:20px 8px 22px;font-size:13px;color:var(--green)}
+  .bottom{position:sticky;bottom:max(6px,env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr 1fr;margin:0 -2px;padding:12px 0;background:rgba(0,0,0,.78)}button{background:transparent;color:var(--green);border:0;border-right:1px solid rgba(57,255,106,.4);font-size:16px;padding:10px 4px;text-shadow:0 0 10px rgba(57,255,106,.5)}button:last-child{border-right:0}button:active{opacity:.65;transform:scale(.98)}
+  .hint{font-size:11px;color:var(--muted);line-height:1.35;margin-top:8px}.hide{display:none!important}
+  @media(max-width:430px){body{padding-left:10px;padding-right:10px}.big{font-size:22px}.val{font-size:18px}.symbol{font-size:22px}.card{grid-template-columns:68px 1fr;padding:15px 12px}.coinIcon{font-size:36px}.hleft{font-size:22px}.r{grid-template-columns:68px 1fr}.side{font-size:17px}}
+</style>
+</head>
+<body>
+<div class="shade"></div>
+<div class="app">
+  <div class="head"><div><div class="hleft"><span class="brackets">[ POSITIONS ]</span></div><div class="sub">BYBIT UNIFIED</div></div><div><button class="refreshIcon" onclick="loadPositions()">↻</button><div id="clock2" class="time2">--:--:--</div></div></div>
+
+  <div id="settings" class="settings show">
+    <div class="field"><label>API KEY</label><input id="apiKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь API Key"></div>
+    <div class="field"><label>API SECRET</label><input id="apiSecret" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь API Secret"></div>
+    <div class="field"><label>NETWORK</label><select id="env"><option value="https://api.bybit.com">MAINNET</option><option value="https://api-testnet.bybit.com">TESTNET</option></select></div>
+    <div class="hint">Ключи используются только внутри этой HTML-страницы. Рекомендуется Read-Only API key.</div>
+  </div>
+
+  <div class="summary">
+    <div class="sumgrid">
+      <div class="sumcell"><div class="label">TOTAL LONG</div><div id="longTotal" class="big">— USDT</div></div>
+      <div class="sumcell"><div class="label">TOTAL SHORT</div><div id="shortTotal" class="big">— USDT</div></div>
+    </div>
+    <div class="net"><div class="label">NET (LONG - SHORT)</div><div id="netTotal" class="big">— USDT</div><div id="pnlTotal" class="label" style="margin-top:10px">PNL: — USDT</div></div>
+  </div>
+
+  <div id="cards" class="list"></div>
+  <div id="empty" class="empty">[ OPEN POSITIONS NOT FOUND ]</div>
+  <div id="status" class="status"></div>
+
+  <div class="info"><div id="lastUpdate">[ LAST UPDATE: — ]</div></div>
+  <div class="bottom"><button onclick="loadPositions()">[ REFRESH ]</button><button onclick="toggleSettings()">[ SETTINGS ]</button><button onclick="clearInputs()">[ CLEAR ]</button></div>
+</div>
+<script>
+const recvWindow="5000";
+function enc(s){return new TextEncoder().encode(s)}
+function toHex(buffer){return [...new Uint8Array(buffer)].map(b=>b.toString(16).padStart(2,"0")).join("")}
+async function hmacSHA256(secret,message){const key=await crypto.subtle.importKey("raw",enc(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);const sig=await crypto.subtle.sign("HMAC",key,enc(message));return toHex(sig)}
+function fmt(n,max=2){const x=Number(n||0);return x.toLocaleString("en-US",{maximumFractionDigits:max})}
+function fmtSigned(n,max=2){const x=Number(n||0);return (x>0?"+":"") + x.toLocaleString("en-US",{maximumFractionDigits:max})}
+function coinFromSymbol(s){return String(s||"").replace(/USDT$|USDC$|USD$/i,"")}
+function iconFor(coin){const m={BTC:"₿",ETH:"◆",SOL:"≋",XRP:"✕",DOGE:"Ð",ADA:"✣",KAS:"K",BNB:"◇",LINK:"⬡",LTC:"Ł",AVAX:"▲",DOT:"●",MATIC:"M",ARB:"A"};return m[coin]||coin.slice(0,1)}
+function setStatus(t,err=false){const el=document.getElementById("status");el.textContent=t||"";el.className="status"+(err?" err":"")}
+function toggleSettings(){document.getElementById("settings").classList.toggle("show")}
+function clearInputs(){document.getElementById("apiKey").value="";document.getElementById("apiSecret").value=""}
+async function bybitGet(baseUrl,apiKey,apiSecret,path,params){const qs=new URLSearchParams(params).toString();const ts=String(Date.now());const payload=ts+apiKey+recvWindow+qs;const sign=await hmacSHA256(apiSecret,payload);const res=await fetch(baseUrl+path+"?"+qs,{method:"GET",headers:{"X-BAPI-API-KEY":apiKey,"X-BAPI-TIMESTAMP":ts,"X-BAPI-RECV-WINDOW":recvWindow,"X-BAPI-SIGN":sign,"X-BAPI-SIGN-TYPE":"2"}});const text=await res.text();let data;try{data=JSON.parse(text)}catch{throw new Error(text)}if(!res.ok||data.retCode!==0)throw new Error(`HTTP ${res.status}\nretCode: ${data.retCode}\nretMsg: ${data.retMsg||"Unknown error"}`);return data}
+async function getAllPositions(baseUrl,apiKey,apiSecret,category,extraParams){let cursor="",out=[];do{const params={category,limit:"200",...extraParams};if(cursor)params.cursor=cursor;const data=await bybitGet(baseUrl,apiKey,apiSecret,"/v5/position/list",params);const result=data.result||{};out=out.concat(result.list||[]);cursor=result.nextPageCursor||""}while(cursor);return out}
+function hedgePct(longVal,shortVal){const max=Math.max(longVal,shortVal);if(!max)return "0.00";return (Math.abs(longVal-shortVal)/max*100).toFixed(2)}
+async function loadPositions(){const apiKey=document.getElementById("apiKey").value.trim();const apiSecret=document.getElementById("apiSecret").value.trim();const baseUrl=document.getElementById("env").value;document.getElementById("empty").style.display="none";setStatus("[ LOADING POSITIONS... ]");if(!apiKey||!apiSecret){setStatus("[ INSERT API KEY AND API SECRET ]",true);return}if(!crypto||!crypto.subtle){setStatus("[ WEBCRYPTO IS NOT AVAILABLE IN THIS BROWSER ]",true);return}
+try{let all=[];const calls=[getAllPositions(baseUrl,apiKey,apiSecret,"linear",{settleCoin:"USDT"}),getAllPositions(baseUrl,apiKey,apiSecret,"linear",{settleCoin:"USDC"}),getAllPositions(baseUrl,apiKey,apiSecret,"inverse",{})];const results=await Promise.allSettled(calls);const errors=[];results.forEach(r=>r.status==="fulfilled"?all=all.concat(r.value):errors.push(r.reason.message));
+const positions=all.filter(p=>Number(p.size||0)>0);let longTotal=0,shortTotal=0,totalPnl=0;const byCoin={};
+positions.forEach(p=>{const side=p.side==="Buy"?"LONG":"SHORT";const value=Number(p.positionValue||0);const pnl=Number(p.unrealisedPnl||0);const coin=coinFromSymbol(p.symbol);if(!byCoin[coin])byCoin[coin]={coin,symbol:p.symbol,long:null,short:null,longVal:0,shortVal:0,pnl:0};const item={side,value,pnl,size:p.size,entry:p.avgPrice,mark:p.markPrice,liq:p.liqPrice,lev:p.leverage};if(side==="LONG"){longTotal+=value;byCoin[coin].long=item;byCoin[coin].longVal+=value}else{shortTotal+=value;byCoin[coin].short=item;byCoin[coin].shortVal+=value}byCoin[coin].pnl+=pnl;totalPnl+=pnl});
+const net=longTotal-shortTotal;document.getElementById("longTotal").textContent=fmt(longTotal)+" USDT";document.getElementById("shortTotal").textContent=fmt(shortTotal)+" USDT";const netEl=document.getElementById("netTotal");netEl.textContent=fmtSigned(net)+" USDT ("+(longTotal+shortTotal?fmt(Math.abs(net)/(Math.max(longTotal,shortTotal)||1)*100,2):"0")+"%)";netEl.className="big "+(net<0?"neg":"");const pnlEl=document.getElementById("pnlTotal");pnlEl.textContent="PNL: "+fmtSigned(totalPnl)+" USDT";pnlEl.className="label "+(totalPnl<0?"neg":"");
+const groups=Object.values(byCoin).sort((a,b)=>Math.max(b.longVal,b.shortVal)-Math.max(a.longVal,a.shortVal));const cards=document.getElementById("cards");cards.innerHTML="";if(!groups.length){document.getElementById("empty").style.display="block"}else{groups.forEach(g=>{const div=document.createElement("div");div.className="card";const rows=[];if(g.short)rows.push(`<div class="r"><div class="side">SHORT</div><div class="val">${fmt(g.short.value)} USDT</div></div>`);if(g.long)rows.push(`<div class="r"><div class="side">LONG</div><div class="val">${fmt(g.long.value)} USDT</div></div>`);const pclass=g.pnl<0?"pnlNeg":"pnlPos";div.innerHTML=`<div class="coinIcon">${iconFor(g.coin)}</div><div><div class="ctop"><div class="symbol">${g.symbol}</div><div class="hedge">HEDGE&nbsp; ${hedgePct(g.longVal,g.shortVal)}%</div></div><div class="rows">${rows.join("")}</div><div class="mini"><div>PNL <span class="${pclass}">${fmtSigned(g.pnl)}</span></div><div style="text-align:right">NET ${fmtSigned(g.longVal-g.shortVal)}</div></div></div>`;cards.appendChild(div)})}
+const now=new Date();document.getElementById("lastUpdate").textContent="[ LAST UPDATE: "+now.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit",second:"2-digit"})+" ]";setStatus(errors.length?"[ PARTIAL LOAD ]\n"+errors.join("\n\n"):"");document.getElementById("settings").classList.remove("show")}catch(e){setStatus("[ ERROR ]\n"+e.message+"\n\nЕсли видишь Failed to fetch / CORS — Bybit заблокировал прямой запрос из браузера.",true)}}
+function tick(){const d=new Date();document.getElementById("clock2").textContent=d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}setInterval(tick,1000);tick();
+</script>
+</body>
+</html>
