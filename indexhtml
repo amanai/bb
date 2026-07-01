@@ -96,4 +96,4 @@ const now=new Date();document.getElementById("lastUpdate").textContent="[ LAST U
 function tick(){const d=new Date();document.getElementById("clock2").textContent=d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}setInterval(tick,1000);tick();
 </script>
 </body>
-</html>
+</html> 
