@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bybit Position Layers</title>
+<style>
+  :root{
+    --bg:#020503; --panel:#061009; --panel2:#07170d; --line:#19ff68; --muted:#79a98b;
+    --text:#d9ffe2; --green:#35ff71; --red:#ff4b5e; --amber:#ffc400; --dim:#0b2b16;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(circle at top,#082510 0,#020503 42%,#000 100%);
+    color:var(--text);
+    font-family:"SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-weight:300; letter-spacing:.01em; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:18px 14px 40px}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:18px}
+  .title{font-size:25px;color:var(--green);text-shadow:0 0 16px rgba(53,255,113,.5)}
+  .sub{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.5}
+  .badge{border:1px solid var(--line);color:var(--green);padding:8px 10px;border-radius:4px;white-space:nowrap;box-shadow:0 0 14px rgba(25,255,104,.15)}
+  .panel{border:1px solid rgba(25,255,104,.75);background:linear-gradient(180deg,rgba(4,16,8,.92),rgba(2,7,4,.94));box-shadow:0 0 22px rgba(25,255,104,.13), inset 0 0 20px rgba(25,255,104,.03);border-radius:5px;padding:14px;margin-bottom:14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+  label{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;margin:0 0 6px}
+  input,select,button{width:100%;font:inherit;border-radius:4px;border:1px solid rgba(25,255,104,.45);background:#020805;color:var(--text);padding:11px 10px;outline:none;font-size:15px;font-weight:300}
+  input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 2px rgba(53,255,113,.12)}
+  button{background:#031d0c;color:var(--green);border-color:var(--green);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;box-shadow:0 0 16px rgba(53,255,113,.16)}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.6;cursor:wait}
+  .hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px}
+  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+  .card{border:1px solid rgba(25,255,104,.45);background:rgba(2,10,5,.75);border-radius:5px;padding:12px;min-height:86px}
+  .card .k{color:var(--muted);font-size:11px;text-transform:uppercase;margin-bottom:10px}
+  .card .v{font-size:21px;color:var(--green);font-variant-numeric:tabular-nums;word-break:break-word}
+  .card.red .v{color:var(--red)} .card.amber .v{color:var(--amber)}
+  .results{overflow:auto;border:1px solid rgba(25,255,104,.55);border-radius:5px;background:rgba(0,0,0,.28);margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:12px;min-width:820px}
+  th,td{border-bottom:1px solid rgba(25,255,104,.16);padding:10px 8px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  th{color:var(--muted);font-weight:400;text-transform:uppercase;background:rgba(25,255,104,.05)}
+  td:first-child,th:first-child{text-align:left}
+  .side-buy{color:var(--green)} .side-sell{color:var(--red)} .muted{color:var(--muted)} .err{color:var(--red);white-space:pre-wrap;font-size:12px;line-height:1.45}
+  .ok{color:var(--green)} .warn{color:var(--amber)}
+  .smallrow{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin-top:10px;line-height:1.45}
+  .layerBox{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .note{font-size:12px;color:var(--text);line-height:1.55}
+  .note b{color:var(--green);font-weight:400}
+  @media(max-width:780px){.grid,.grid3,.grid4,.cards,.layerBox{grid-template-columns:1fr}.title{font-size:21px}.wrap{padding:14px 10px 34px}.card .v{font-size:20px}table{min-width:720px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><div class="title">[ POSITION LAYERS ]</div><div class="sub">BYBIT V5 · слои открытия LONG/SHORT · текущая цена · разбивка по диапазонам</div></div>
+    <div class="badge" id="status">IDLE</div>
+  </div>
+
+  <div class="panel">
+    <div class="grid">
+      <div><label>API Key</label><input id="apiKey" autocomplete="off" placeholder="Вставь API Key"></div>
+      <div><label>API Secret</label><input id="apiSecret" type="password" autocomplete="off" placeholder="Вставь API Secret"></div>
+    </div>
+    <div class="hint">Ключи используются только для чтения истории исполнений Bybit. Текущая цена берётся публичным market endpoint.</div>
+  </div>
+
+  <div class="panel">
+    <div class="grid4">
+      <div><label>Category</label><select id="category"><option value="linear">linear / USDT-USDC perp</option><option value="inverse">inverse</option><option value="spot">spot</option></select></div>
+      <div><label>Symbol</label><input id="symbol" value="SOLUSDT" autocapitalize="characters" placeholder="SOLUSDT"></div>
+      <div><label>Layer</label><select id="direction"><option value="short">SHORT слой / Sell</option><option value="long">LONG слой / Buy</option></select></div>
+      <div><label>Bucket step</label><input id="bucketStep" inputmode="decimal" value="1" placeholder="1"></div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="grid4">
+      <div><label>Цена от</label><input id="minPrice" inputmode="decimal" placeholder="например 80"></div>
+      <div><label>Цена до</label><input id="maxPrice" inputmode="decimal" placeholder="пусто = без лимита"></div>
+      <div><label>Дата от</label><input id="startDate" type="date"></div>
+      <div><label>Дата до</label><input id="endDate" type="date"></div>
+    </div>
+    <div style="height:10px"></div>
+    <button id="scanBtn">SCAN LAYERS</button>
+    <div class="hint">Логика: SHORT считает только Sell-исполнения, LONG считает только Buy-исполнения. Закрытия противоположной стороной не учитываются.</div>
+  </div>
+
+  <div class="cards">
+    <div class="card amber"><div class="k">Current price</div><div class="v" id="mLast">—</div></div>
+    <div class="card"><div class="k">Profitable/BE qty</div><div class="v" id="mProfQty">—</div></div>
+    <div class="card"><div class="k">Filtered qty</div><div class="v" id="mQty">—</div></div>
+    <div class="card"><div class="k">Filtered value</div><div class="v" id="mValue">—</div></div>
+    <div class="card amber"><div class="k">Filtered avg</div><div class="v" id="mAvg">—</div></div>
+  </div>
+
+  <div class="panel">
+    <div id="summary" class="note">Готов к запросу.</div>
+    <div id="small" class="smallrow"></div>
+    <div id="error" class="err"></div>
+  </div>
+
+  <div class="layerBox">
+    <div class="results">
+      <table>
+        <thead><tr><th>Price bucket</th><th>Qty</th><th>Value</th><th>Avg</th><th>Execs</th></tr></thead>
+        <tbody id="bucketBody"><tr><td colspan="5" class="muted">Нет данных</td></tr></tbody>
+      </table>
+    </div>
+    <div class="results">
+      <table>
+        <thead><tr><th>Time</th><th>Side</th><th>Exec price</th><th>Qty</th><th>Value</th><th>Order</th></tr></thead>
+        <tbody id="tbody"><tr><td colspan="6" class="muted">Нет данных</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const API_HOST = 'https://api.bybit.com';
+const RECV_WINDOW = '5000';
+
+function pad(n){return String(n).padStart(2,'0')}
+function todayLocal(){const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function daysAgoLocal(n){const d=new Date(); d.setDate(d.getDate()-n); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+$('startDate').value = daysAgoLocal(30);
+$('endDate').value = todayLocal();
+
+function fmt(n, d=2){
+  if(!Number.isFinite(n)) return '—';
+  return n.toLocaleString('en-US',{maximumFractionDigits:d, minimumFractionDigits:n>=1000?2:Math.min(d,4)});
+}
+function num(x){ const n=parseFloat(x); return Number.isFinite(n)?n:0; }
+function decInput(id, fallback){
+  const v=$(id).value.trim();
+  if(v==='') return fallback;
+  const n=parseFloat(v.replace(',','.'));
+  return Number.isFinite(n)?n:fallback;
+}
+function setStatus(t, ok=true){ $('status').textContent=t; $('status').style.color=ok?'var(--green)':'var(--red)'; }
+function setErr(t=''){ $('error').textContent=t; }
+function qs(params){
+  return Object.entries(params).filter(([k,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+}
+async function hmacSHA256(secret, message){
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+  return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function bybitGet(path, params, apiKey='', apiSecret=''){
+  const query = qs(params);
+  const headers = {};
+  if(apiKey && apiSecret){
+    const ts = String(Date.now());
+    const signPayload = ts + apiKey + RECV_WINDOW + query;
+    const sign = await hmacSHA256(apiSecret, signPayload);
+    headers['X-BAPI-API-KEY'] = apiKey;
+    headers['X-BAPI-SIGN'] = sign;
+    headers['X-BAPI-TIMESTAMP'] = ts;
+    headers['X-BAPI-RECV-WINDOW'] = RECV_WINDOW;
+    headers['X-BAPI-SIGN-TYPE'] = '2';
+  }
+  const res = await fetch(API_HOST + path + (query ? '?' + query : ''), {method:'GET', headers});
+  const text = await res.text();
+  let json;
+  try{ json = JSON.parse(text); }catch(e){ throw new Error('Non-JSON response: ' + text.slice(0,300)); }
+  if(json.retCode !== 0) throw new Error(`${json.retCode}: ${json.retMsg}`);
+  return json;
+}
+function dateStartMs(s){ return new Date(s+'T00:00:00').getTime(); }
+function dateEndMs(s){ return new Date(s+'T23:59:59.999').getTime(); }
+function chunks7(startMs,endMs){
+  const out=[]; const max=7*24*60*60*1000 - 1; let a=startMs;
+  while(a<=endMs){ const b=Math.min(a+max,endMs); out.push([a,b]); a=b+1; }
+  return out;
+}
+function wantedSide(direction){ return direction === 'short' ? 'Sell' : 'Buy'; }
+function isProfitableLayer(e, direction, last){
+  const p=num(e.execPrice);
+  return direction === 'short' ? p >= last : p <= last;
+}
+async function getCurrentPrice(category, symbol){
+  const json = await bybitGet('/v5/market/tickers', {category, symbol});
+  const item = (json.result?.list || [])[0];
+  const last = num(item?.lastPrice);
+  if(!last) throw new Error('Не удалось получить текущую цену по ' + symbol);
+  return last;
+}
+async function fetchExecutions(){
+  const apiKey=$('apiKey').value.trim(); const apiSecret=$('apiSecret').value.trim();
+  const category=$('category').value; const symbol=$('symbol').value.trim().toUpperCase();
+  const direction=$('direction').value;
+  const minP=decInput('minPrice', -Infinity);
+  const maxP=decInput('maxPrice', Infinity);
+  if(!apiKey || !apiSecret) throw new Error('Введи API Key и API Secret');
+  if(!symbol) throw new Error('Введи symbol, например SOLUSDT');
+  if(!crypto.subtle) throw new Error('В этом браузере недоступен crypto.subtle. Открой через HTTPS, например GitHub Pages.');
+  const sMs=dateStartMs($('startDate').value); const eMs=dateEndMs($('endDate').value);
+  if(!Number.isFinite(sMs) || !Number.isFinite(eMs) || sMs>eMs) throw new Error('Проверь даты');
+
+  setStatus('PRICE');
+  const last = await getCurrentPrice(category, symbol);
+  const all=[]; const ch=chunks7(sMs,eMs);
+  let req=0;
+  for(const [startTime,endTime] of ch){
+    let cursor='';
+    do{
+      req++; setStatus(`FETCH ${req}`);
+      const params={category, symbol, startTime, endTime, execType:'Trade', limit:100};
+      if(cursor) params.cursor=cursor;
+      const json=await bybitGet('/v5/execution/list', params, apiKey, apiSecret);
+      const list=json.result?.list || [];
+      all.push(...list);
+      cursor=json.result?.nextPageCursor || '';
+    }while(cursor);
+  }
+  const side=wantedSide(direction);
+  const directional = all.filter(e => e.side === side).map(e => ({...e, _qty:num(e.execQty), _price:num(e.execPrice), _value:num(e.execQty)*num(e.execPrice)})).filter(e=>e._qty>0&&e._price>0);
+  const filtered = directional.filter(e => e._price >= minP && e._price <= maxP).sort((a,b)=>num(b.execTime)-num(a.execTime));
+  const profitable = directional.filter(e => isProfitableLayer(e, direction, last)).sort((a,b)=>num(b.execTime)-num(a.execTime));
+  return {all, directional, filtered, profitable, ch, last, symbol, direction, minP, maxP};
+}
+function totals(rows){
+  const qty = rows.reduce((s,e)=>s+e._qty,0);
+  const value = rows.reduce((s,e)=>s+e._value,0);
+  return {qty, value, avg: qty>0 ? value/qty : NaN, count: rows.length};
+}
+function renderExecutions(rows){
+  const tbody=$('tbody');
+  if(!rows.length){ tbody.innerHTML='<tr><td colspan="6" class="muted">Ничего не найдено по фильтру</td></tr>'; return; }
+  tbody.innerHTML = rows.slice(0,500).map(e=>{
+    const t=new Date(num(e.execTime)).toLocaleString();
+    const cls=e.side==='Buy'?'side-buy':'side-sell';
+    return `<tr><td>${t}</td><td class="${cls}">${e.side}</td><td>${fmt(e._price,8)}</td><td>${fmt(e._qty,8)}</td><td>${fmt(e._value,2)}</td><td>${e.orderType||''}</td></tr>`;
+  }).join('');
+}
+function renderBuckets(rows, step, direction){
+  const body=$('bucketBody');
+  if(!rows.length){ body.innerHTML='<tr><td colspan="5" class="muted">Нет разбивки</td></tr>'; return; }
+  if(!Number.isFinite(step) || step<=0) step=1;
+  const map=new Map();
+  for(const e of rows){
+    const lo=Math.floor(e._price/step)*step;
+    const hi=lo+step;
+    const key=lo.toFixed(8)+'-'+hi.toFixed(8);
+    if(!map.has(key)) map.set(key,{lo,hi,qty:0,value:0,count:0});
+    const b=map.get(key); b.qty+=e._qty; b.value+=e._value; b.count++;
+  }
+  let buckets=[...map.values()];
+  buckets.sort((a,b)=> direction==='short' ? b.lo-a.lo : a.lo-b.lo);
+  body.innerHTML=buckets.map(b=>{
+    const avg=b.qty>0?b.value/b.qty:NaN;
+    return `<tr><td>${fmt(b.lo,8)}–${fmt(b.hi,8)}</td><td>${fmt(b.qty,8)}</td><td>${fmt(b.value,2)}</td><td>${fmt(avg,8)}</td><td>${fmt(b.count,0)}</td></tr>`;
+  }).join('');
+}
+function updateMetrics(data){
+  const ft=totals(data.filtered); const pt=totals(data.profitable);
+  $('mLast').textContent=fmt(data.last,8);
+  $('mProfQty').textContent=fmt(pt.qty,8);
+  $('mQty').textContent=fmt(ft.qty,8);
+  $('mValue').textContent=fmt(ft.value,2);
+  $('mAvg').textContent=fmt(ft.avg,8);
+  const sideText=data.direction==='short'?'SHORT / Sell':'LONG / Buy';
+  const rule=data.direction==='short' ? `выше или равно текущей цене ${fmt(data.last,8)}` : `ниже или равно текущей цене ${fmt(data.last,8)}`;
+  const action=data.direction==='short' ? 'можно выкупать/закрывать в плюс или безубыток' : 'можно продавать/закрывать в плюс или безубыток';
+  $('summary').innerHTML = `${data.symbol}: текущая цена <b>${fmt(data.last,8)}</b>. По слою <b>${sideText}</b> найдено <b>${fmt(pt.qty,8)}</b> монет, открытых ${rule}; этот объём теоретически ${action} без учёта комиссий и funding.`;
+  $('small').innerHTML = `<span>Все исполнения: <b class="ok">${data.all.length}</b></span><span>Только направление: <b class="ok">${data.directional.length}</b></span><span>По фильтру цены: <b class="ok">${data.filtered.length}</b></span><span>API диапазонов: <b class="ok">${data.ch.length}</b></span>`;
+}
+$('scanBtn').onclick = async ()=>{
+  setErr(''); setStatus('RUN'); $('scanBtn').disabled=true;
+  try{
+    const data=await fetchExecutions();
+    updateMetrics(data);
+    renderBuckets(data.filtered, decInput('bucketStep',1), data.direction);
+    renderExecutions(data.filtered);
+    setStatus('DONE');
+  }catch(e){ setStatus('ERROR',false); setErr(e.message || String(e)); }
+  finally{ $('scanBtn').disabled=false; }
+};
+</script>
+</body>
+</html>
