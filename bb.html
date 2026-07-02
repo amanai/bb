@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Bybit Positions Terminal</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b10;
+      --bg2: #0b1118;
+      --panel: rgba(14, 22, 31, .92);
+      --panel2: rgba(18, 28, 39, .88);
+      --line: #223141;
+      --line2: #314357;
+      --text: #eef4fb;
+      --muted: #94a3b5;
+      --muted2: #6f7f91;
+      --yellow: #f0b90b;
+      --green: #25d879;
+      --red: #ff4d4f;
+      --blue: #4aa3ff;
+      --shadow: rgba(0,0,0,.34);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); }
+    body, button, input, select { font-feature-settings: "tnum" 1, "case" 1, "zero" 1; font-variant-numeric: tabular-nums; }
+    body {
+      font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-weight: 400;
+      letter-spacing: -.15px;
+      padding: max(14px, env(safe-area-inset-top)) 12px max(22px, env(safe-area-inset-bottom));
+      background:
+        radial-gradient(circle at 20% 0%, rgba(240,185,11,.14), transparent 26%),
+        radial-gradient(circle at 86% 8%, rgba(74,163,255,.12), transparent 32%),
+        linear-gradient(180deg, #070b10 0%, #0a1118 44%, #06090d 100%);
+    }
+    .app { max-width: 1180px; margin: 0 auto; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 10px 4px 18px; border-bottom: 1px solid rgba(49,67,87,.65);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo { font-size: 28px; font-weight: 500; letter-spacing: .5px; white-space: nowrap; }
+    .logo span { color: var(--yellow); }
+    .title { color: #dce6f2; font-size: 15px; font-weight: 450; border-left: 1px solid var(--line2); padding-left: 12px; white-space: nowrap; }
+    .conn { color: var(--green); font-size: 12px; font-weight: 500; letter-spacing: .3px; white-space: nowrap; }
+    .conn:before { content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--green); margin-right:6px; box-shadow:0 0 14px rgba(37,216,121,.8); }
+
+    .controls, .metrics, .panel, .foot {
+      background: linear-gradient(180deg, rgba(17,27,38,.88), rgba(9,15,22,.88));
+      border: 1px solid rgba(49,67,87,.82);
+      box-shadow: 0 18px 40px var(--shadow);
+    }
+    .controls { margin-top: 18px; border-radius: 16px; padding: 14px; }
+    .control-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    label { display: block; color: var(--muted); font-size: 12px; font-weight: 450; margin: 0 0 7px; }
+    input, select {
+      width: 100%; min-height: 46px; border: 1px solid #2a3b4f; border-radius: 10px;
+      color: var(--text); background: rgba(5,10,15,.9); padding: 12px;
+      font-size: 16px; outline: none; font-weight: 500;
+    }
+    input:focus, select:focus { border-color: var(--yellow); box-shadow: 0 0 0 3px rgba(240,185,11,.11); }
+    .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    button {
+      min-height: 48px; border-radius: 10px; font-size: 16px; font-weight: 500;
+      border: 1px solid rgba(240,185,11,.7); color: #121212; background: var(--yellow);
+    }
+    button.secondary { background: transparent; color: #d9e3ef; border-color: #2d4055; }
+    button:active { transform: scale(.985); opacity: .9; }
+    .hint { color: var(--muted2); font-size: 12px; line-height: 1.35; margin-top: 10px; }
+
+    .metrics { margin-top: 14px; border-radius: 16px; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric {
+      position: relative; overflow: hidden; min-height: 104px; padding: 14px;
+      border: 1px solid rgba(49,67,87,.86); border-radius: 13px;
+      background: radial-gradient(circle at 100% 0%, rgba(255,255,255,.05), transparent 34%), rgba(8,14,21,.62);
+    }
+    .metric .name { color: #b8c4d2; font-size: 12px; font-weight: 500; letter-spacing: .2px; text-transform: uppercase; }
+    .metric .value { margin-top: 12px; font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: clamp(21px, 6.5vw, 32px); line-height: 1.05; font-weight: 500; letter-spacing: -.9px; font-variant-numeric: tabular-nums; }
+    .metric .sub { margin-top: 8px; color: var(--muted); font-size: 12px; font-weight: 450; }
+    .green { color: var(--green); } .red { color: var(--red); } .blue { color: var(--blue); } .yellow { color: var(--yellow); }
+    .arrow { position:absolute; right:16px; top:28px; font-size:36px; opacity:.45; }
+
+    .tabs { margin-top: 14px; display:flex; align-items:center; gap: 22px; padding: 0 2px; border-bottom: 1px solid rgba(49,67,87,.7); }
+    .tab { padding: 14px 0 11px; color: var(--muted); font-weight: 500; font-size: 14px; }
+    .tab.active { color: var(--yellow); border-bottom: 2px solid var(--yellow); }
+
+    .status { margin-top: 12px; white-space: pre-wrap; border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.35; display:none; }
+    .status.ok { display:block; color:#d8ffeb; background:rgba(37,216,121,.09); border:1px solid rgba(37,216,121,.28); }
+    .status.error { display:block; color:#ffd6d6; background:rgba(255,77,79,.11); border:1px solid rgba(255,77,79,.34); }
+
+    .panel { margin-top: 0; border-radius: 0 0 16px 16px; overflow: hidden; display:none; }
+    .table-wrap { width:100%; overflow-x:auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 920px; width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+    th, td { padding: 14px 12px; border-right: 1px solid rgba(49,67,87,.62); border-bottom: 1px solid rgba(49,67,87,.62); vertical-align: middle; }
+    th { position: sticky; top: 0; z-index: 2; background: rgba(9,16,24,.98); color: #b7c3d1; font-size: 12px; font-weight: 500; text-align: right; }
+    th:first-child, td:first-child { text-align: left; position: sticky; left: 0; z-index: 1; background: rgba(10,17,25,.98); }
+    th:first-child { z-index: 3; }
+    td { text-align: right; color: #edf3fb; font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: 400; letter-spacing: -.25px; }
+    tr:nth-child(even) td { background-color: rgba(255,255,255,.018); }
+    tr:active td { background-color: rgba(240,185,11,.06); }
+tr.group-a td { background-color: rgba(74, 163, 255, .045); }
+    tr.group-b td { background-color: rgba(240, 185, 11, .045); }
+    tr.group-c td { background-color: rgba(37, 216, 121, .04); }
+    tr.group-d td { background-color: rgba(170, 108, 255, .045); }
+    tr.group-a td:first-child { border-left: 3px solid rgba(74, 163, 255, .72); }
+    tr.group-b td:first-child { border-left: 3px solid rgba(240, 185, 11, .72); }
+    tr.group-c td:first-child { border-left: 3px solid rgba(37, 216, 121, .62); }
+    tr.group-d td:first-child { border-left: 3px solid rgba(170, 108, 255, .72); }
+    tr.group-a td:first-child, tr.group-b td:first-child, tr.group-c td:first-child, tr.group-d td:first-child { padding-left: 9px; }
+    .symbol { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: 500; letter-spacing: .2px; }
+    .badge { display:inline-block; margin-left:6px; padding:2px 6px; border-radius: 7px; background:#223141; color:#c8d2de; font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 11px; font-weight:800; }
+    .side { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: 500; letter-spacing: .3px; }
+    .side.long { color: var(--green); } .side.short { color: var(--red); }
+    .num { font-variant-numeric: tabular-nums; }
+    .muted { color: var(--muted); }
+    .footer-row { display:flex; justify-content:space-between; gap:12px; padding: 12px 14px; color: var(--muted); font-size: 12px; border-top: 1px solid rgba(49,67,87,.55); }
+    .foot { margin-top: 14px; border-radius: 14px; padding: 13px 14px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+    @media (min-width: 760px) {
+      body { padding-left: 22px; padding-right: 22px; }
+      .control-grid { grid-template-columns: 1.15fr 1.15fr .7fr; }
+      .metrics { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 420px) {
+      .logo { font-size: 24px; }
+      .title { font-size: 13px; }
+      .controls { padding: 12px; }
+      .metrics { gap: 8px; padding: 8px; }
+      .metric { min-height: 98px; padding: 12px; }
+      th, td { padding: 13px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">BYB<span>I</span>T</div>
+        <div class="title">Positions Overview</div>
+      </div>
+      <div id="conn" class="conn">READY</div>
+    </div>
+
+    <div class="controls">
+      <div class="control-grid">
+        <div>
+          <label>API KEY</label>
+          <input id="apiKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь API Key" />
+        </div>
+        <div>
+          <label>API SECRET</label>
+          <input id="apiSecret" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь API Secret" />
+        </div>
+        <div>
+          <label>РЕЖИМ</label>
+          <select id="env">
+            <option value="https://api.bybit.com">Mainnet</option>
+            <option value="https://api-testnet.bybit.com">Testnet</option>
+          </select>
+        </div>
+      </div>
+      <div class="buttons">
+        <button class="secondary" onclick="clearInputs()">Очистить</button>
+        <button onclick="loadPositions()">Обновить</button>
+      </div>
+      <div class="hint">API Secret используется только внутри этой HTML-страницы для подписи запроса. Лучше использовать ключ Read-Only.</div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="name green">LONG (USDT)</div><div id="longTotal" class="value">—</div><div id="longCount" class="sub">0 позиций</div><div class="arrow green">▲</div></div>
+      <div class="metric"><div class="name red">SHORT (USDT)</div><div id="shortTotal" class="value">—</div><div id="shortCount" class="sub">0 позиций</div><div class="arrow red">▼</div></div>
+      <div class="metric"><div class="name">NET (LONG - SHORT)</div><div id="netTotal" class="value blue">—</div><div id="netSide" class="sub">—</div></div>
+      <div class="metric"><div class="name">UNREALIZED PNL</div><div id="pnlTotal" class="value">—</div><div id="posCount" class="sub">0 позиций</div></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">Позиции</div>
+      <div class="tab">По монетам</div>
+      <div class="tab">Детали</div>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div id="tablePanel" class="panel">
+      <div class="table-wrap" id="tableWrap"></div>
+      <div class="footer-row">
+        <div id="lastUpdate">Последнее обновление: —</div>
+        <div id="totalRows">Всего позиций: 0</div>
+      </div>
+    </div>
+
+    <div class="foot">
+      Данные получены через Bybit API V5. Таблица специально сделана широкой: на iPhone удобно читать, если двигать её влево/вправо.
+    </div>
+  </div>
+
+<script>
+const recvWindow = "5000";
+
+function enc(str) { return new TextEncoder().encode(str); }
+function toHex(buffer) { return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join(""); }
+async function hmacSHA256(secret, message) {
+  const key = await crypto.subtle.importKey("raw", enc(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, enc(message));
+  return toHex(sig);
+}
+function fmt(n, max = 2) {
+  const x = Number(n || 0);
+  return x.toLocaleString("en-US", { maximumFractionDigits: max });
+}
+function fmtRaw(v, max = 8) {
+  if (v === undefined || v === null || v === "" || Number(v) === 0 && String(v) === "") return "—";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return v || "—";
+  return n.toLocaleString("en-US", { maximumFractionDigits: max });
+}
+function setStatus(text, kind="") {
+  const el = document.getElementById("status");
+  el.textContent = text || "";
+  el.className = "status" + (kind ? " " + kind : "");
+}
+function setConn(text) { document.getElementById("conn").textContent = text; }
+function clearInputs() {
+  document.getElementById("apiKey").value = "";
+  document.getElementById("apiSecret").value = "";
+}
+async function bybitGet(baseUrl, apiKey, apiSecret, path, params) {
+  const qs = new URLSearchParams(params).toString();
+  const timestamp = String(Date.now());
+  const payload = timestamp + apiKey + recvWindow + qs;
+  const sign = await hmacSHA256(apiSecret, payload);
+  const res = await fetch(baseUrl + path + "?" + qs, {
+    method: "GET",
+    headers: {
+      "X-BAPI-API-KEY": apiKey,
+      "X-BAPI-TIMESTAMP": timestamp,
+      "X-BAPI-RECV-WINDOW": recvWindow,
+      "X-BAPI-SIGN": sign,
+      "X-BAPI-SIGN-TYPE": "2"
+    }
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error(text); }
+  if (!res.ok || data.retCode !== 0) throw new Error(`HTTP ${res.status}\nretCode: ${data.retCode}\nretMsg: ${data.retMsg || "Unknown error"}`);
+  return data;
+}
+async function getAllPositions(baseUrl, apiKey, apiSecret, category, extraParams) {
+  let cursor = "", out = [];
+  do {
+    const params = { category, limit: "200", ...extraParams };
+    if (cursor) params.cursor = cursor;
+    const data = await bybitGet(baseUrl, apiKey, apiSecret, "/v5/position/list", params);
+    const result = data.result || {};
+    out = out.concat(result.list || []);
+    cursor = result.nextPageCursor || "";
+  } while (cursor);
+  return out;
+}
+function pnlClass(v) {
+  const n = Number(v || 0);
+  if (n > 0) return "green";
+  if (n < 0) return "red";
+  return "muted";
+}
+async function loadPositions() {
+  const apiKey = document.getElementById("apiKey").value.trim();
+  const apiSecret = document.getElementById("apiSecret").value.trim();
+  const baseUrl = document.getElementById("env").value;
+  document.getElementById("tablePanel").style.display = "none";
+  setStatus("Загружаю позиции...", "ok");
+  setConn("LOADING");
+
+  if (!apiKey || !apiSecret) { setStatus("Вставь API Key и API Secret.", "error"); setConn("READY"); return; }
+  if (!window.crypto || !crypto.subtle) { setStatus("На этом браузере недоступен WebCrypto. Открой через Safari/Chrome.", "error"); setConn("ERROR"); return; }
+
+  try {
+    let all = [];
+    const calls = [
+      getAllPositions(baseUrl, apiKey, apiSecret, "linear", { settleCoin: "USDT" }),
+      getAllPositions(baseUrl, apiKey, apiSecret, "linear", { settleCoin: "USDC" }),
+      getAllPositions(baseUrl, apiKey, apiSecret, "inverse", {})
+    ];
+    const results = await Promise.allSettled(calls);
+    const errors = [];
+    results.forEach(r => r.status === "fulfilled" ? all = all.concat(r.value) : errors.push(r.reason.message));
+
+    const positions = all.filter(p => Number(p.size || 0) > 0);
+    let longTotal = 0, shortTotal = 0, longCount = 0, shortCount = 0, totalPnl = 0;
+
+    const rows = positions.map(p => {
+      const side = p.side === "Buy" ? "LONG" : "SHORT";
+      const value = Number(p.positionValue || 0);
+      const pnl = Number(p.unrealisedPnl || 0);
+      if (side === "LONG") { longTotal += value; longCount++; } else { shortTotal += value; shortCount++; }
+      totalPnl += pnl;
+      return {
+        symbol: p.symbol,
+        side,
+        size: p.size,
+        value,
+        entry: p.avgPrice,
+        mark: p.markPrice,
+        leverage: p.leverage,
+        pnl,
+        liq: p.liqPrice
+      };
+    }).sort((a, b) => {
+      const coinA = (a.symbol || "").replace(/USDT$|USDC$|USD$/i, "");
+      const coinB = (b.symbol || "").replace(/USDT$|USDC$|USD$/i, "");
+      if (coinA !== coinB) return coinA.localeCompare(coinB);
+      // Внутри одной монеты: сначала SHORT, потом LONG
+      const rank = { SHORT: 0, LONG: 1 };
+      if (rank[a.side] !== rank[b.side]) return rank[a.side] - rank[b.side];
+      return b.value - a.value;
+    });
+
+    const groupClasses = ["group-a", "group-b", "group-c", "group-d"];
+    let currentCoin = null;
+    let groupIndex = -1;
+    rows.forEach(r => {
+      const coin = (r.symbol || "").replace(/USDT$|USDC$|USD$/i, "");
+      if (coin !== currentCoin) { currentCoin = coin; groupIndex++; }
+      r.groupClass = groupClasses[groupIndex % groupClasses.length];
+    });
+
+    const net = longTotal - shortTotal;
+    document.getElementById("longTotal").textContent = fmt(longTotal);
+    document.getElementById("shortTotal").textContent = fmt(shortTotal);
+    document.getElementById("netTotal").textContent = fmt(net);
+    document.getElementById("netTotal").className = "value " + (net >= 0 ? "green" : "red");
+    document.getElementById("netSide").textContent = net > 0 ? "LONG" : net < 0 ? "SHORT" : "NEUTRAL";
+    document.getElementById("longCount").textContent = `${longCount} позиций`;
+    document.getElementById("shortCount").textContent = `${shortCount} позиций`;
+    document.getElementById("pnlTotal").textContent = fmt(totalPnl);
+    document.getElementById("pnlTotal").className = "value " + pnlClass(totalPnl);
+    document.getElementById("posCount").textContent = `${rows.length} позиций`;
+
+    if (!rows.length) {
+      setStatus(errors.length ? "Позиции не найдены. Частичные ошибки:\n" + errors.join("\n\n") : "Открытых позиций нет.", errors.length ? "error" : "ok");
+      setConn(errors.length ? "ERROR" : "CONNECTED");
+      return;
+    }
+
+    const html = `
+      <table>
+        <thead>
+          <tr>
+            <th>Символ</th>
+            <th>Направление</th>
+            <th>Стоимость<br>(USDT)</th>
+            <th>Размер</th>
+            <th>Цена входа</th>
+            <th>Маркировка</th>
+            <th>PnL<br>(USDT)</th>
+            <th>Ликв. цена</th>
+            <th>Плечо</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr class="${r.groupClass}">
+              <td><span class="symbol">${r.symbol}</span><span class="badge">Perp</span></td>
+              <td><span class="side ${r.side === "LONG" ? "long" : "short"}">${r.side}</span></td>
+              <td class="num">${fmt(r.value)}</td>
+              <td class="num">${fmtRaw(r.size, 8)}</td>
+              <td class="num">${fmtRaw(r.entry, 8)}</td>
+              <td class="num">${fmtRaw(r.mark, 8)}</td>
+              <td class="num ${pnlClass(r.pnl)}">${fmt(r.pnl)}</td>
+              <td class="num">${r.liq ? fmtRaw(r.liq, 8) : "—"}</td>
+              <td class="num">${r.leverage ? r.leverage + "x" : "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>`;
+
+    document.getElementById("tableWrap").innerHTML = html;
+    document.getElementById("tablePanel").style.display = "block";
+    document.getElementById("lastUpdate").textContent = "Последнее обновление: " + new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    document.getElementById("totalRows").textContent = `Всего позиций: ${rows.length}`;
+    setStatus(errors.length ? "Загружено, но часть запросов вернула ошибку:\n" + errors.join("\n\n") : "Готово.", errors.length ? "error" : "ok");
+    setConn(errors.length ? "PARTIAL" : "CONNECTED");
+  } catch (e) {
+    setStatus("Ошибка:\n" + e.message + "\n\nЕсли видишь Failed to fetch / CORS — значит Bybit заблокировал прямой запрос из браузера.", "error");
+    setConn("ERROR");
+  }
+}
+</script>
+</body>
+</html>
