@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bybit Execution Scanner</title>
+<style>
+  :root{
+    --bg:#020503; --panel:#061009; --panel2:#07170d; --line:#19ff68; --muted:#79a98b;
+    --text:#d9ffe2; --green:#35ff71; --red:#ff4b5e; --amber:#ffc400; --dim:#0b2b16;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(circle at top,#082510 0,#020503 42%,#000 100%);
+    color:var(--text);
+    font-family:"SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-weight:300; letter-spacing:.01em; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:18px 14px 40px}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:18px}
+  .title{font-size:26px;color:var(--green);text-shadow:0 0 16px rgba(53,255,113,.5)}
+  .sub{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.5}
+  .badge{border:1px solid var(--line);color:var(--green);padding:8px 10px;border-radius:4px;white-space:nowrap;box-shadow:0 0 14px rgba(25,255,104,.15)}
+  .panel{border:1px solid rgba(25,255,104,.75);background:linear-gradient(180deg,rgba(4,16,8,.92),rgba(2,7,4,.94));box-shadow:0 0 22px rgba(25,255,104,.13), inset 0 0 20px rgba(25,255,104,.03);border-radius:5px;padding:14px;margin-bottom:14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  label{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;margin:0 0 6px}
+  input,select,button{width:100%;font:inherit;border-radius:4px;border:1px solid rgba(25,255,104,.45);background:#020805;color:var(--text);padding:11px 10px;outline:none;font-size:15px;font-weight:300}
+  input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 2px rgba(53,255,113,.12)}
+  button{background:#031d0c;color:var(--green);border-color:var(--green);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;box-shadow:0 0 16px rgba(53,255,113,.16)}
+  button:active{transform:translateY(1px)}
+  .hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  .card{border:1px solid rgba(25,255,104,.45);background:rgba(2,10,5,.75);border-radius:5px;padding:12px;min-height:86px}
+  .card .k{color:var(--muted);font-size:11px;text-transform:uppercase;margin-bottom:10px}
+  .card .v{font-size:22px;color:var(--green);font-variant-numeric:tabular-nums;word-break:break-word}
+  .card.red .v{color:var(--red)}
+  .card.amber .v{color:var(--amber)}
+  .results{overflow:auto;border:1px solid rgba(25,255,104,.55);border-radius:5px;background:rgba(0,0,0,.28)}
+  table{width:100%;border-collapse:collapse;font-size:12px;min-width:780px}
+  th,td{border-bottom:1px solid rgba(25,255,104,.16);padding:10px 8px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  th{color:var(--muted);font-weight:400;text-transform:uppercase;background:rgba(25,255,104,.05)}
+  td:first-child,th:first-child{text-align:left}
+  .side-buy{color:var(--green)} .side-sell{color:var(--red)} .muted{color:var(--muted)} .err{color:var(--red);white-space:pre-wrap;font-size:12px;line-height:1.45}
+  .ok{color:var(--green)}
+  .smallrow{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin-top:10px}
+  .hide{display:none}
+  @media(max-width:720px){.grid,.grid3,.cards{grid-template-columns:1fr}.title{font-size:22px}.wrap{padding:14px 10px 34px}.card .v{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><div class="title">[ EXECUTION SCANNER ]</div><div class="sub">BYBIT V5 · исполненные ордера · фильтр по цене</div></div>
+    <div class="badge" id="status">IDLE</div>
+  </div>
+
+  <div class="panel">
+    <div class="grid">
+      <div><label>API Key</label><input id="apiKey" autocomplete="off" placeholder="Вставь API Key"></div>
+      <div><label>API Secret</label><input id="apiSecret" type="password" autocomplete="off" placeholder="Вставь API Secret"></div>
+    </div>
+    <div class="hint">Ключи не отправляются никуда, кроме Bybit. Для GitHub Pages версия должна быть без зашитых ключей.</div>
+  </div>
+
+  <div class="panel">
+    <div class="grid3">
+      <div><label>Category</label><select id="category"><option value="linear">linear / USDT-USDC perp</option><option value="inverse">inverse</option><option value="spot">spot</option></select></div>
+      <div><label>Symbol</label><input id="symbol" value="SOLUSDT" autocapitalize="characters" placeholder="SOLUSDT"></div>
+      <div><label>Direction</label><select id="direction"><option value="short">Открытие SHORT / Sell</option><option value="long">Открытие LONG / Buy</option><option value="both">Обе стороны</option></select></div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="grid3">
+      <div><label>Цена от</label><input id="minPrice" inputmode="decimal" placeholder="80"></div>
+      <div><label>Цена до</label><input id="maxPrice" inputmode="decimal" placeholder="пусто = без лимита"></div>
+      <div><label>Тип подсчёта</label><select id="qtyMode"><option value="open">Только открывающий объём</option><option value="all">Весь исполненный объём</option></select></div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="grid3">
+      <div><label>Дата от</label><input id="startDate" type="date"></div>
+      <div><label>Дата до</label><input id="endDate" type="date"></div>
+      <div><label>&nbsp;</label><button id="scanBtn">SCAN EXECUTIONS</button></div>
+    </div>
+    <div class="hint">Важно: Bybit отдаёт историю исполнений через /v5/execution/list. Один API-запрос покрывает максимум 7 дней, поэтому приложение само режет диапазон на 7-дневные куски.</div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="k">Exec count</div><div class="v" id="mCount">—</div></div>
+    <div class="card"><div class="k">Token qty</div><div class="v" id="mQty">—</div></div>
+    <div class="card"><div class="k">Value USDT</div><div class="v" id="mValue">—</div></div>
+    <div class="card amber"><div class="k">Avg price</div><div class="v" id="mAvg">—</div></div>
+  </div>
+
+  <div class="panel">
+    <div id="summary" class="smallrow">Готов к запросу.</div>
+    <div id="error" class="err"></div>
+  </div>
+
+  <div class="results">
+    <table>
+      <thead><tr><th>Time</th><th>Side</th><th>Exec price</th><th>Exec qty</th><th>Open qty</th><th>Value</th><th>Order type</th><th>Maker</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="8" class="muted">Нет данных</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const API_HOST = 'https://api.bybit.com';
+const RECV_WINDOW = '5000';
+
+function pad(n){return String(n).padStart(2,'0')}
+function todayLocal(){const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function daysAgoLocal(n){const d=new Date(); d.setDate(d.getDate()-n); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+$('startDate').value = daysAgoLocal(7);
+$('endDate').value = todayLocal();
+
+function fmt(n, d=2){
+  if(!Number.isFinite(n)) return '—';
+  return n.toLocaleString('en-US',{maximumFractionDigits:d, minimumFractionDigits:n>=1000?2:Math.min(d,4)});
+}
+function num(x){ const n=parseFloat(x); return Number.isFinite(n)?n:0; }
+function setStatus(t, ok=true){ $('status').textContent=t; $('status').style.color=ok?'var(--green)':'var(--red)'; }
+function setErr(t=''){ $('error').textContent=t; }
+function qs(params){
+  return Object.entries(params).filter(([k,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+}
+async function hmacSHA256(secret, message){
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+  return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function bybitGet(path, params, apiKey, apiSecret){
+  const query = qs(params);
+  const ts = String(Date.now());
+  const signPayload = ts + apiKey + RECV_WINDOW + query;
+  const sign = await hmacSHA256(apiSecret, signPayload);
+  const res = await fetch(API_HOST + path + '?' + query, {
+    method:'GET',
+    headers:{
+      'X-BAPI-API-KEY': apiKey,
+      'X-BAPI-SIGN': sign,
+      'X-BAPI-TIMESTAMP': ts,
+      'X-BAPI-RECV-WINDOW': RECV_WINDOW,
+      'X-BAPI-SIGN-TYPE': '2'
+    }
+  });
+  const text = await res.text();
+  let json;
+  try{ json = JSON.parse(text); }catch(e){ throw new Error('Non-JSON response: ' + text.slice(0,300)); }
+  if(json.retCode !== 0) throw new Error(`${json.retCode}: ${json.retMsg}`);
+  return json;
+}
+function dateStartMs(s){ return new Date(s+'T00:00:00').getTime(); }
+function dateEndMs(s){ return new Date(s+'T23:59:59.999').getTime(); }
+function chunks7(startMs,endMs){
+  const out=[]; const max=7*24*60*60*1000 - 1; let a=startMs;
+  while(a<=endMs){ const b=Math.min(a+max,endMs); out.push([a,b]); a=b+1; }
+  return out;
+}
+function sideMatches(side, direction){
+  if(direction==='both') return true;
+  if(direction==='long') return side === 'Buy';
+  if(direction==='short') return side === 'Sell';
+  return true;
+}
+function openQtyOf(exec){
+  const q = num(exec.execQty);
+  const closed = num(exec.closedSize);
+  return Math.max(0, q - closed);
+}
+async function fetchExecutions(){
+  const apiKey=$('apiKey').value.trim(); const apiSecret=$('apiSecret').value.trim();
+  const category=$('category').value; const symbol=$('symbol').value.trim().toUpperCase();
+  const direction=$('direction').value; const qtyMode=$('qtyMode').value;
+  const minP=$('minPrice').value.trim()==='' ? -Infinity : parseFloat($('minPrice').value.replace(',','.'));
+  const maxP=$('maxPrice').value.trim()==='' ? Infinity : parseFloat($('maxPrice').value.replace(',','.'));
+  if(!apiKey || !apiSecret) throw new Error('Введи API Key и API Secret');
+  if(!symbol) throw new Error('Введи symbol, например SOLUSDT');
+  if(!crypto.subtle) throw new Error('В этом браузере недоступен crypto.subtle. Открой через HTTPS, например GitHub Pages.');
+  const sMs=dateStartMs($('startDate').value); const eMs=dateEndMs($('endDate').value);
+  if(!Number.isFinite(sMs) || !Number.isFinite(eMs) || sMs>eMs) throw new Error('Проверь даты');
+  const all=[]; const ch=chunks7(sMs,eMs);
+  let req=0;
+  for(const [startTime,endTime] of ch){
+    let cursor='';
+    do{
+      req++;
+      setStatus(`FETCH ${req}`);
+      const params={category, symbol, startTime, endTime, execType:'Trade', limit:100};
+      if(cursor) params.cursor=cursor;
+      const json=await bybitGet('/v5/execution/list', params, apiKey, apiSecret);
+      const list=json.result?.list || [];
+      all.push(...list);
+      cursor=json.result?.nextPageCursor || '';
+    }while(cursor);
+  }
+  const filtered=[];
+  for(const e of all){
+    const price=num(e.execPrice); const side=e.side;
+    if(price < minP || price > maxP) continue;
+    if(!sideMatches(side,direction)) continue;
+    const oq=openQtyOf(e);
+    const usedQty = qtyMode==='open' ? oq : num(e.execQty);
+    if(usedQty <= 0) continue;
+    filtered.push({...e, _usedQty:usedQty, _openQty:oq});
+  }
+  filtered.sort((a,b)=>num(b.execTime)-num(a.execTime));
+  return {all, filtered, ch};
+}
+function render(rows){
+  const tbody=$('tbody');
+  if(!rows.length){ tbody.innerHTML='<tr><td colspan="8" class="muted">Ничего не найдено по этим фильтрам</td></tr>'; return; }
+  tbody.innerHTML = rows.slice(0,500).map(e=>{
+    const t=new Date(num(e.execTime)).toLocaleString();
+    const cls=e.side==='Buy'?'side-buy':'side-sell';
+    return `<tr><td>${t}</td><td class="${cls}">${e.side}</td><td>${fmt(num(e.execPrice),8)}</td><td>${fmt(num(e.execQty),8)}</td><td>${fmt(e._openQty,8)}</td><td>${fmt(num(e.execValue),2)}</td><td>${e.orderType||''}</td><td>${e.isMaker?'YES':'NO'}</td></tr>`;
+  }).join('');
+}
+function calc(rows){
+  const qty = rows.reduce((s,e)=>s+e._usedQty,0);
+  const value = rows.reduce((s,e)=>s+(e._usedQty*num(e.execPrice)),0);
+  const avg = qty>0 ? value/qty : NaN;
+  $('mCount').textContent = fmt(rows.length,0);
+  $('mQty').textContent = fmt(qty,8);
+  $('mValue').textContent = fmt(value,2);
+  $('mAvg').textContent = fmt(avg,8);
+}
+$('scanBtn').onclick = async ()=>{
+  setErr(''); setStatus('RUN'); $('scanBtn').disabled=true;
+  try{
+    const {all,filtered,ch}=await fetchExecutions();
+    calc(filtered); render(filtered);
+    setStatus('DONE');
+    $('summary').innerHTML = `<span>Получено исполнений: <b class="ok">${all.length}</b></span><span>После фильтра: <b class="ok">${filtered.length}</b></span><span>Диапазонов API: <b class="ok">${ch.length}</b></span><span>Показано строк: <b class="ok">${Math.min(filtered.length,500)}</b></span>`;
+  }catch(e){ setStatus('ERROR',false); setErr(e.message || String(e)); }
+  finally{ $('scanBtn').disabled=false; }
+};
+</script>
+</body>
+</html>
