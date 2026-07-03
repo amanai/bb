@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -32,7 +32,7 @@
   button:active{transform:translateY(1px)}
   button:disabled{opacity:.6;cursor:wait}
   .hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px}
-  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+  .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
   .card{border:1px solid rgba(25,255,104,.45);background:rgba(2,10,5,.75);border-radius:5px;padding:12px;min-height:86px}
   .card .k{color:var(--muted);font-size:11px;text-transform:uppercase;margin-bottom:10px}
   .card .v{font-size:21px;color:var(--green);font-variant-numeric:tabular-nums;word-break:break-word}
@@ -54,47 +54,54 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <div><div class="title">[ POSITION LAYERS ]</div><div class="sub">BYBIT V5 · слои открытия LONG/SHORT · текущая цена · разбивка по диапазонам</div></div>
+    <div><div class="title">[ POSITION LAYERS ]</div><div class="sub">BYBIT V5 · LONG/SHORT entry layers · live price · close simulation</div></div>
     <div class="badge" id="status">IDLE</div>
   </div>
 
   <div class="panel">
     <div class="grid">
-      <div><label>API Key</label><input id="apiKey" autocomplete="off" placeholder="Вставь API Key"></div>
-      <div><label>API Secret</label><input id="apiSecret" type="password" autocomplete="off" placeholder="Вставь API Secret"></div>
+      <div><label>API Key</label><input id="apiKey" autocomplete="off" placeholder="Paste API Key"></div>
+      <div><label>API Secret</label><input id="apiSecret" type="password" autocomplete="off" placeholder="Paste API Secret"></div>
     </div>
-    <div class="hint">Ключи используются только для чтения истории исполнений Bybit. Текущая цена берётся публичным market endpoint.</div>
+    <div class="hint">Keys are used only to read Bybit execution history and open positions. Live price comes from the public market endpoint.</div>
   </div>
 
   <div class="panel">
     <div class="grid4">
       <div><label>Category</label><select id="category"><option value="linear">linear / USDT-USDC perp</option><option value="inverse">inverse</option><option value="spot">spot</option></select></div>
-      <div><label>Symbol</label><input id="symbol" value="SOLUSDT" autocapitalize="characters" placeholder="SOLUSDT"></div>
-      <div><label>Layer</label><select id="direction"><option value="short">SHORT слой / Sell</option><option value="long">LONG слой / Buy</option></select></div>
+      <div><label>Open position / Pair</label><select id="positionSelect"><option value="SOLUSDT" data-category="linear" data-side="">SOLUSDT — manual default</option></select></div>
+      <div><label>Layer</label><select id="direction"><option value="short">SHORT layer / Sell</option><option value="long">LONG layer / Buy</option></select></div>
       <div><label>Bucket step</label><input id="bucketStep" inputmode="decimal" value="1" placeholder="1"></div>
     </div>
     <div style="height:10px"></div>
     <div class="grid4">
-      <div><label>Цена от</label><input id="minPrice" inputmode="decimal" placeholder="например 80"></div>
-      <div><label>Цена до</label><input id="maxPrice" inputmode="decimal" placeholder="пусто = без лимита"></div>
-      <div><label>Дата от</label><input id="startDate" type="date"></div>
-      <div><label>Дата до</label><input id="endDate" type="date"></div>
+      <div><label>Price from</label><input id="minPrice" inputmode="decimal" placeholder="example: 80"></div>
+      <div><label>Price to</label><input id="maxPrice" inputmode="decimal" placeholder="empty = no limit"></div>
+      <div><label>Simulation price</label><input id="simPrice" inputmode="decimal" placeholder="empty = live price"></div>
+      <div><label>Date from</label><input id="startDate" type="date"></div>
     </div>
     <div style="height:10px"></div>
-    <button id="scanBtn">SCAN LAYERS</button>
-    <div class="hint">Логика: SHORT считает только Sell-исполнения, LONG считает только Buy-исполнения. Закрытия противоположной стороной не учитываются.</div>
+    <div style="height:10px"></div>
+    <div class="grid4">
+      <div><label>Date to</label><input id="endDate" type="date"></div>
+      <div><label>&nbsp;</label><button id="loadPositionsBtn">LOAD OPEN POSITIONS</button></div>
+      <div><label>&nbsp;</label><button id="scanBtn">SCAN LAYERS</button></div>
+      <div></div>
+    </div>
+    <div class="hint">Logic: SHORT counts only Sell executions, LONG counts only Buy executions. Opposite-side closing trades are ignored. Simulation price shows how much layer volume could be closed at profit or breakeven at any chosen price.</div>
   </div>
 
   <div class="cards">
     <div class="card amber"><div class="k">Current price</div><div class="v" id="mLast">—</div></div>
-    <div class="card"><div class="k">Profitable/BE qty</div><div class="v" id="mProfQty">—</div></div>
+    <div class="card amber"><div class="k">Simulation price</div><div class="v" id="mSim">—</div></div>
+    <div class="card"><div class="k">Can close +/BE</div><div class="v" id="mProfQty">—</div></div>
     <div class="card"><div class="k">Filtered qty</div><div class="v" id="mQty">—</div></div>
     <div class="card"><div class="k">Filtered value</div><div class="v" id="mValue">—</div></div>
     <div class="card amber"><div class="k">Filtered avg</div><div class="v" id="mAvg">—</div></div>
   </div>
 
   <div class="panel">
-    <div id="summary" class="note">Готов к запросу.</div>
+    <div id="summary" class="note">Ready.</div>
     <div id="small" class="smallrow"></div>
     <div id="error" class="err"></div>
   </div>
@@ -103,13 +110,13 @@
     <div class="results">
       <table>
         <thead><tr><th>Price bucket</th><th>Qty</th><th>Value</th><th>Avg</th><th>Execs</th></tr></thead>
-        <tbody id="bucketBody"><tr><td colspan="5" class="muted">Нет данных</td></tr></tbody>
+        <tbody id="bucketBody"><tr><td colspan="5" class="muted">No data</td></tr></tbody>
       </table>
     </div>
     <div class="results">
       <table>
         <thead><tr><th>Time</th><th>Side</th><th>Exec price</th><th>Qty</th><th>Value</th><th>Order</th></tr></thead>
-        <tbody id="tbody"><tr><td colspan="6" class="muted">Нет данных</td></tr></tbody>
+        <tbody id="tbody"><tr><td colspan="6" class="muted">No data</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -183,23 +190,93 @@ async function getCurrentPrice(category, symbol){
   const json = await bybitGet('/v5/market/tickers', {category, symbol});
   const item = (json.result?.list || [])[0];
   const last = num(item?.lastPrice);
-  if(!last) throw new Error('Не удалось получить текущую цену по ' + symbol);
+  if(!last) throw new Error('Could not fetch live price for ' + symbol);
   return last;
 }
+
+async function loadOpenPositions(){
+  const apiKey=$('apiKey').value.trim();
+  const apiSecret=$('apiSecret').value.trim();
+  if(!apiKey || !apiSecret) throw new Error('Enter API Key and API Secret');
+  if(!crypto.subtle) throw new Error('crypto.subtle is not available in this browser. Open the page via HTTPS, for example GitHub Pages.');
+
+  const requests=[
+    {category:'linear', settleCoin:'USDT'},
+    {category:'linear', settleCoin:'USDC'},
+    {category:'inverse'}
+  ];
+  const positions=[];
+  let errors=[];
+  for(const r of requests){
+    try{
+      const json=await bybitGet('/v5/position/list', r, apiKey, apiSecret);
+      for(const p of (json.result?.list || [])){
+        const size=num(p.size);
+        if(size>0){
+          positions.push({
+            symbol:p.symbol,
+            side:p.side,
+            size,
+            value:num(p.positionValue),
+            category:r.category,
+            avg:num(p.avgPrice)
+          });
+        }
+      }
+    }catch(e){ errors.push(`${r.category}${r.settleCoin?'/'+r.settleCoin:''}: ${e.message}`); }
+  }
+
+  positions.sort((a,b)=>a.symbol.localeCompare(b.symbol) || a.side.localeCompare(b.side));
+  const sel=$('positionSelect');
+  sel.innerHTML='';
+
+  if(!positions.length){
+    const opt=document.createElement('option');
+    opt.value='SOLUSDT'; opt.dataset.category='linear'; opt.dataset.side='';
+    opt.textContent='SOLUSDT — manual default';
+    sel.appendChild(opt);
+    throw new Error('No open positions found. You can still use SOLUSDT manual default. ' + (errors.length ? errors.join(' | ') : ''));
+  }
+
+  for(const p of positions){
+    const sideText=p.side==='Buy'?'LONG':'SHORT';
+    const opt=document.createElement('option');
+    opt.value=p.symbol;
+    opt.dataset.category=p.category;
+    opt.dataset.side=p.side;
+    opt.textContent=`${p.symbol} — ${sideText} — qty ${fmt(p.size,8)} — value ${fmt(p.value,2)}`;
+    sel.appendChild(opt);
+  }
+  applySelectedPosition();
+  return positions;
+}
+
+function applySelectedPosition(){
+  const sel=$('positionSelect');
+  const opt=sel.options[sel.selectedIndex];
+  if(!opt) return;
+  if(opt.dataset.category) $('category').value=opt.dataset.category;
+  if(opt.dataset.side==='Buy') $('direction').value='long';
+  if(opt.dataset.side==='Sell') $('direction').value='short';
+}
+
 async function fetchExecutions(){
   const apiKey=$('apiKey').value.trim(); const apiSecret=$('apiSecret').value.trim();
-  const category=$('category').value; const symbol=$('symbol').value.trim().toUpperCase();
+  const category=$('category').value; const symbol=$('positionSelect').value.trim().toUpperCase();
   const direction=$('direction').value;
   const minP=decInput('minPrice', -Infinity);
   const maxP=decInput('maxPrice', Infinity);
-  if(!apiKey || !apiSecret) throw new Error('Введи API Key и API Secret');
-  if(!symbol) throw new Error('Введи symbol, например SOLUSDT');
-  if(!crypto.subtle) throw new Error('В этом браузере недоступен crypto.subtle. Открой через HTTPS, например GitHub Pages.');
+  const simInputRaw = $('simPrice').value.trim();
+  if(!apiKey || !apiSecret) throw new Error('Enter API Key and API Secret');
+  if(!symbol) throw new Error('Select or enter a symbol, for example SOLUSDT');
+  if(!crypto.subtle) throw new Error('crypto.subtle is not available in this browser. Open the page via HTTPS, for example GitHub Pages.');
   const sMs=dateStartMs($('startDate').value); const eMs=dateEndMs($('endDate').value);
-  if(!Number.isFinite(sMs) || !Number.isFinite(eMs) || sMs>eMs) throw new Error('Проверь даты');
+  if(!Number.isFinite(sMs) || !Number.isFinite(eMs) || sMs>eMs) throw new Error('Check the date range');
 
   setStatus('PRICE');
   const last = await getCurrentPrice(category, symbol);
+  const simPrice = simInputRaw === '' ? last : decInput('simPrice', last);
+  if(!Number.isFinite(simPrice) || simPrice <= 0) throw new Error('Check the simulation price');
   const all=[]; const ch=chunks7(sMs,eMs);
   let req=0;
   for(const [startTime,endTime] of ch){
@@ -217,8 +294,8 @@ async function fetchExecutions(){
   const side=wantedSide(direction);
   const directional = all.filter(e => e.side === side).map(e => ({...e, _qty:num(e.execQty), _price:num(e.execPrice), _value:num(e.execQty)*num(e.execPrice)})).filter(e=>e._qty>0&&e._price>0);
   const filtered = directional.filter(e => e._price >= minP && e._price <= maxP).sort((a,b)=>num(b.execTime)-num(a.execTime));
-  const profitable = directional.filter(e => isProfitableLayer(e, direction, last)).sort((a,b)=>num(b.execTime)-num(a.execTime));
-  return {all, directional, filtered, profitable, ch, last, symbol, direction, minP, maxP};
+  const profitable = directional.filter(e => isProfitableLayer(e, direction, simPrice)).sort((a,b)=>num(b.execTime)-num(a.execTime));
+  return {all, directional, filtered, profitable, ch, last, simPrice, symbol, direction, minP, maxP};
 }
 function totals(rows){
   const qty = rows.reduce((s,e)=>s+e._qty,0);
@@ -227,7 +304,7 @@ function totals(rows){
 }
 function renderExecutions(rows){
   const tbody=$('tbody');
-  if(!rows.length){ tbody.innerHTML='<tr><td colspan="6" class="muted">Ничего не найдено по фильтру</td></tr>'; return; }
+  if(!rows.length){ tbody.innerHTML='<tr><td colspan="6" class="muted">Nothing found by this filter</td></tr>'; return; }
   tbody.innerHTML = rows.slice(0,500).map(e=>{
     const t=new Date(num(e.execTime)).toLocaleString();
     const cls=e.side==='Buy'?'side-buy':'side-sell';
@@ -236,7 +313,7 @@ function renderExecutions(rows){
 }
 function renderBuckets(rows, step, direction){
   const body=$('bucketBody');
-  if(!rows.length){ body.innerHTML='<tr><td colspan="5" class="muted">Нет разбивки</td></tr>'; return; }
+  if(!rows.length){ body.innerHTML='<tr><td colspan="5" class="muted">No bucket breakdown</td></tr>'; return; }
   if(!Number.isFinite(step) || step<=0) step=1;
   const map=new Map();
   for(const e of rows){
@@ -255,17 +332,30 @@ function renderBuckets(rows, step, direction){
 }
 function updateMetrics(data){
   const ft=totals(data.filtered); const pt=totals(data.profitable);
+  const estPnl = data.profitable.reduce((s,e)=>s + (data.direction==='short' ? (e._price-data.simPrice)*e._qty : (data.simPrice-e._price)*e._qty), 0);
   $('mLast').textContent=fmt(data.last,8);
+  $('mSim').textContent=fmt(data.simPrice,8);
   $('mProfQty').textContent=fmt(pt.qty,8);
   $('mQty').textContent=fmt(ft.qty,8);
   $('mValue').textContent=fmt(ft.value,2);
   $('mAvg').textContent=fmt(ft.avg,8);
   const sideText=data.direction==='short'?'SHORT / Sell':'LONG / Buy';
-  const rule=data.direction==='short' ? `выше или равно текущей цене ${fmt(data.last,8)}` : `ниже или равно текущей цене ${fmt(data.last,8)}`;
-  const action=data.direction==='short' ? 'можно выкупать/закрывать в плюс или безубыток' : 'можно продавать/закрывать в плюс или безубыток';
-  $('summary').innerHTML = `${data.symbol}: текущая цена <b>${fmt(data.last,8)}</b>. По слою <b>${sideText}</b> найдено <b>${fmt(pt.qty,8)}</b> монет, открытых ${rule}; этот объём теоретически ${action} без учёта комиссий и funding.`;
-  $('small').innerHTML = `<span>Все исполнения: <b class="ok">${data.all.length}</b></span><span>Только направление: <b class="ok">${data.directional.length}</b></span><span>По фильтру цены: <b class="ok">${data.filtered.length}</b></span><span>API диапазонов: <b class="ok">${data.ch.length}</b></span>`;
+  const rule=data.direction==='short' ? `opened at or above simulation price ${fmt(data.simPrice,8)}` : `opened at or below simulation price ${fmt(data.simPrice,8)}`;
+  const action=data.direction==='short' ? 'could theoretically be bought back / closed at profit or breakeven' : 'could theoretically be sold / closed at profit or breakeven';
+  $('summary').innerHTML = `${data.symbol}: live price <b>${fmt(data.last,8)}</b>, simulation price <b>${fmt(data.simPrice,8)}</b>. In the <b>${sideText}</b> layer, <b>${fmt(pt.qty,8)}</b> tokens were ${rule}; this volume ${action}. Estimated PnL if closed at the simulation price: <b>${fmt(estPnl,2)} USDT</b>, excluding fees and funding.`;
+  $('small').innerHTML = `<span>All executions: <b class="ok">${data.all.length}</b></span><span>Direction only: <b class="ok">${data.directional.length}</b></span><span>Price filter: <b class="ok">${data.filtered.length}</b></span><span>API chunks: <b class="ok">${data.ch.length}</b></span>`;
 }
+$('positionSelect').onchange = applySelectedPosition;
+$('loadPositionsBtn').onclick = async ()=>{
+  setErr(''); setStatus('POSITIONS'); $('loadPositionsBtn').disabled=true;
+  try{
+    const positions=await loadOpenPositions();
+    setStatus('LOADED');
+    $('summary').innerHTML=`Loaded <b>${positions.length}</b> open position(s). Select a pair, set simulation price if needed, then scan layers.`;
+  }catch(e){ setStatus('ERROR',false); setErr(e.message || String(e)); }
+  finally{ $('loadPositionsBtn').disabled=false; }
+};
+
 $('scanBtn').onclick = async ()=>{
   setErr(''); setStatus('RUN'); $('scanBtn').disabled=true;
   try{
