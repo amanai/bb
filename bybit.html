@@ -88,7 +88,7 @@
       <div><label>&nbsp;</label><button id="scanBtn">SCAN LAYERS</button></div>
       <div></div>
     </div>
-    <div class="hint">Logic: SHORT counts only Sell executions, LONG counts only Buy executions. Opposite-side closing trades are ignored. Simulation price shows how much layer volume could be closed at profit or breakeven at any chosen price.</div>
+    <div class="hint">Logic: reconstructs live position layers from execution history. This separates Close Long from Open Short by replaying Buy/Sell fills over time. For best accuracy, set Start Date before the position was last flat/zero.</div>
   </div>
 
   <div class="cards">
@@ -244,6 +244,8 @@ async function loadOpenPositions(){
     opt.value=p.symbol;
     opt.dataset.category=p.category;
     opt.dataset.side=p.side;
+    opt.dataset.size=String(p.size);
+    opt.dataset.avg=String(p.avg);
     opt.textContent=`${p.symbol} — ${sideText} — qty ${fmt(p.size,8)} — value ${fmt(p.value,2)}`;
     sel.appendChild(opt);
   }
@@ -260,6 +262,71 @@ function applySelectedPosition(){
   if(opt.dataset.side==='Sell') $('direction').value='short';
 }
 
+function uniqueExecutions(rows){
+  const seen=new Set();
+  const out=[];
+  for(const e of rows){
+    const key=e.execId || `${e.orderId||''}|${e.execTime||''}|${e.side||''}|${e.execPrice||''}|${e.execQty||''}`;
+    if(seen.has(key)) continue;
+    seen.add(key); out.push(e);
+  }
+  return out;
+}
+function selectedPositionInfo(){
+  const sel=$('positionSelect');
+  const opt=sel.options[sel.selectedIndex];
+  return {
+    side: opt?.dataset?.side || '',
+    size: num(opt?.dataset?.size),
+    avg: num(opt?.dataset?.avg)
+  };
+}
+function classifyExecution(e){
+  if(e.execType !== 'Trade') return 'Ignore';
+  const side = e.side;
+  const closed = num(e.closedSize);
+  const ct = e.createType || '';
+
+  // Bybit encodes open/close through createType + closedSize.
+  // orderType (Market/Limit) is intentionally ignored: both follow the same logic.
+  if(closed > 0 || ct === 'CreateByClosing'){
+    if(side === 'Buy') return 'Close Short';
+    if(side === 'Sell') return 'Close Long';
+    return 'Close';
+  }
+
+  if(closed === 0 && ct !== 'CreateByClosing'){
+    if(side === 'Buy') return 'Open Long';
+    if(side === 'Sell') return 'Open Short';
+  }
+
+  return 'Unknown';
+}
+function buildOpenLayers(execs){
+  const sorted=uniqueExecutions(execs).map(e=>{
+    const price=num(e.execPrice);
+    const qty=num(e.execQty);
+    const time=num(e.execTime);
+    const action=classifyExecution(e);
+    const layerSide = action === 'Open Long' ? 'LONG' : action === 'Open Short' ? 'SHORT' : '';
+    return {
+      ...e,
+      _qty: qty,
+      _price: price,
+      _time: time,
+      _value: qty*price,
+      _action: action,
+      _layerSide: layerSide
+    };
+  }).filter(e=>e._qty>0&&e._price>0&&e._time>0&&e.execType==='Trade')
+    .sort((a,b)=>a._time-b._time || String(a.execId||'').localeCompare(String(b.execId||'')));
+
+  const longOpens=sorted.filter(e=>e._action==='Open Long');
+  const shortOpens=sorted.filter(e=>e._action==='Open Short');
+  const closings=sorted.filter(e=>e._action==='Close Long' || e._action==='Close Short');
+  const unknown=sorted.filter(e=>e._action==='Unknown');
+  return {longOpens, shortOpens, closings, unknown, sorted};
+}
 async function fetchExecutions(){
   const apiKey=$('apiKey').value.trim(); const apiSecret=$('apiSecret').value.trim();
   const category=$('category').value; const symbol=$('positionSelect').value.trim().toUpperCase();
@@ -291,11 +358,12 @@ async function fetchExecutions(){
       cursor=json.result?.nextPageCursor || '';
     }while(cursor);
   }
-  const side=wantedSide(direction);
-  const directional = all.filter(e => e.side === side).map(e => ({...e, _qty:num(e.execQty), _price:num(e.execPrice), _value:num(e.execQty)*num(e.execPrice)})).filter(e=>e._qty>0&&e._price>0);
-  const filtered = directional.filter(e => e._price >= minP && e._price <= maxP).sort((a,b)=>num(b.execTime)-num(a.execTime));
-  const profitable = directional.filter(e => isProfitableLayer(e, direction, simPrice)).sort((a,b)=>num(b.execTime)-num(a.execTime));
-  return {all, directional, filtered, profitable, ch, last, simPrice, symbol, direction, minP, maxP};
+  const {longOpens, shortOpens, closings, unknown, sorted}=buildOpenLayers(all);
+  const directional = (direction==='short' ? shortOpens : longOpens).map(e=>({...e, _value:e._qty*e._price}));
+  const filtered = directional.filter(e => e._price >= minP && e._price <= maxP).sort((a,b)=>b._time-a._time);
+  const profitable = directional.filter(e => isProfitableLayer(e, direction, simPrice)).sort((a,b)=>b._time-a._time);
+  const pos=selectedPositionInfo();
+  return {all:uniqueExecutions(all), sorted, directional, filtered, profitable, ch, last, simPrice, symbol, direction, minP, maxP, pos, longOpens, shortOpens, closings, unknown};
 }
 function totals(rows){
   const qty = rows.reduce((s,e)=>s+e._qty,0);
@@ -307,8 +375,8 @@ function renderExecutions(rows){
   if(!rows.length){ tbody.innerHTML='<tr><td colspan="6" class="muted">Nothing found by this filter</td></tr>'; return; }
   tbody.innerHTML = rows.slice(0,500).map(e=>{
     const t=new Date(num(e.execTime)).toLocaleString();
-    const cls=e.side==='Buy'?'side-buy':'side-sell';
-    return `<tr><td>${t}</td><td class="${cls}">${e.side}</td><td>${fmt(e._price,8)}</td><td>${fmt(e._qty,8)}</td><td>${fmt(e._value,2)}</td><td>${e.orderType||''}</td></tr>`;
+    const cls=e._layerSide==='LONG'?'side-buy':'side-sell';
+    return `<tr><td>${t}</td><td class="${cls}">${e._action||e._layerSide}</td><td>${fmt(e._price,8)}</td><td>${fmt(e._qty,8)}</td><td>${fmt(e._value,2)}</td><td>${e.orderType||''}</td></tr>`;
   }).join('');
 }
 function renderBuckets(rows, step, direction){
@@ -331,7 +399,7 @@ function renderBuckets(rows, step, direction){
   }).join('');
 }
 function updateMetrics(data){
-  const ft=totals(data.filtered); const pt=totals(data.profitable);
+  const ft=totals(data.filtered); const pt=totals(data.profitable); const dt=totals(data.directional);
   const estPnl = data.profitable.reduce((s,e)=>s + (data.direction==='short' ? (e._price-data.simPrice)*e._qty : (data.simPrice-e._price)*e._qty), 0);
   $('mLast').textContent=fmt(data.last,8);
   $('mSim').textContent=fmt(data.simPrice,8);
@@ -339,11 +407,17 @@ function updateMetrics(data){
   $('mQty').textContent=fmt(ft.qty,8);
   $('mValue').textContent=fmt(ft.value,2);
   $('mAvg').textContent=fmt(ft.avg,8);
-  const sideText=data.direction==='short'?'SHORT / Sell':'LONG / Buy';
-  const rule=data.direction==='short' ? `opened at or above simulation price ${fmt(data.simPrice,8)}` : `opened at or below simulation price ${fmt(data.simPrice,8)}`;
-  const action=data.direction==='short' ? 'could theoretically be bought back / closed at profit or breakeven' : 'could theoretically be sold / closed at profit or breakeven';
-  $('summary').innerHTML = `${data.symbol}: live price <b>${fmt(data.last,8)}</b>, simulation price <b>${fmt(data.simPrice,8)}</b>. In the <b>${sideText}</b> layer, <b>${fmt(pt.qty,8)}</b> tokens were ${rule}; this volume ${action}. Estimated PnL if closed at the simulation price: <b>${fmt(estPnl,2)} USDT</b>, excluding fees and funding.`;
-  $('small').innerHTML = `<span>All executions: <b class="ok">${data.all.length}</b></span><span>Direction only: <b class="ok">${data.directional.length}</b></span><span>Price filter: <b class="ok">${data.filtered.length}</b></span><span>API chunks: <b class="ok">${data.ch.length}</b></span>`;
+  const sideText=data.direction==='short'?'SHORT':'LONG';
+  const rule=data.direction==='short' ? `classified Open Short executions at or above simulation price ${fmt(data.simPrice,8)}` : `classified Open Long executions at or below simulation price ${fmt(data.simPrice,8)}`;
+  const action=data.direction==='short' ? 'would be profitable or breakeven if bought back at the simulation price' : 'would be profitable or breakeven if sold at the simulation price';
+  const closingCount=data.closings.length;
+  const unknownCount=data.unknown.length;
+  let warning='';
+  if(unknownCount>0){
+    warning=`<br><br><b style="color:var(--amber)">Warning:</b> ${unknownCount} trade execution(s) could not be classified from createType/closedSize and were ignored.`;
+  }
+  $('summary').innerHTML = `${data.symbol}: live price <b>${fmt(data.last,8)}</b>, simulation price <b>${fmt(data.simPrice,8)}</b>. Classified <b>${sideText}</b> open layer in selected date range: <b>${fmt(dt.qty,8)}</b> tokens. From this layer, <b>${fmt(pt.qty,8)}</b> tokens are ${rule}; this volume ${action}. Estimated PnL if closed at the simulation price: <b>${fmt(estPnl,2)} USDT</b>, excluding fees and funding.${warning}`;
+  $('small').innerHTML = `<span>Unique executions: <b class="ok">${data.all.length}</b></span><span>Trade executions: <b class="ok">${data.sorted.length}</b></span><span>Classified ${sideText} opens: <b class="ok">${data.directional.length}</b></span><span>Price filter opens: <b class="ok">${data.filtered.length}</b></span><span>Excluded closes: <b class="ok">${closingCount}</b></span><span>API chunks: <b class="ok">${data.ch.length}</b></span>`;
 }
 $('positionSelect').onchange = applySelectedPosition;
 $('loadPositionsBtn').onclick = async ()=>{
