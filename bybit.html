@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Bybit Close Engine — engine 1.0</title>
+<title>Bybit Close Engine — engine 1.1</title>
 <style>
   :root{
     --bg:#020503; --panel:#061009; --panel2:#07170d; --line:#19ff68; --muted:#79a98b;
@@ -57,8 +57,8 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <div><div class="title">[ CLOSE ENGINE ]</div><div class="sub">BYBIT V5 · position selector · dynamic threshold slider · <b>engine 1.0</b></div></div>
-    <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;justify-content:flex-end"><div class="badge">ENGINE 1.0</div><div class="badge" id="status">IDLE</div></div>
+    <div><div class="title">[ CLOSE ENGINE ]</div><div class="sub">BYBIT V5 · position selector · dynamic threshold slider · <b>engine 1.1</b></div></div>
+    <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;justify-content:flex-end"><div class="badge">ENGINE 1.1</div><div class="badge" id="status">IDLE</div></div>
   </div>
 
   <div class="panel">
@@ -75,7 +75,7 @@
       <div><label>&nbsp;</label><button id="loadPositionsBtn">LOAD POSITIONS</button></div>
       <div><label>&nbsp;</label><button id="scanBtn">CALCULATE</button></div>
     </div>
-    <div class="hint">Default logic: select an open position, press Calculate, and the app uses the position average entry as the default threshold. Move the slider to test another price level.</div>
+    <div class="hint">Default logic: select an open position, press Calculate, and the app uses the current market price as the default profit threshold. Move the slider to test a custom entry layer.</div>
     <div class="sliderPanel">
       <div class="thresholdLine"><span>Price threshold</span><span class="thresholdValue" id="thresholdLabel">—</span></div>
       <input id="thresholdSlider" type="range" min="0" max="1" step="0.0001" value="0" disabled>
@@ -84,7 +84,7 @@
         <div><label>Manual threshold</label><input id="thresholdInput" inputmode="decimal" placeholder="Calculate first" disabled></div>
         <div><label>Reset</label><button id="resetThresholdBtn" disabled>RESET TO ENTRY</button></div>
       </div>
-      <div class="hint">LONG: counts Open Long entries at or below threshold. SHORT: counts Open Short entries at or above threshold. Closings are subtracted using the verified CreateByClosing / closedSize logic.</div>
+      <div class="hint">LONG: counts Open Long entries at or below the effective threshold. SHORT: counts Open Short entries at or above the effective threshold. Effective threshold is capped by current price so non-profitable entries are not counted. Closings are subtracted using the verified CreateByClosing / closedSize logic.</div>
     </div>
     <details>
       <summary>Advanced settings</summary>
@@ -279,9 +279,15 @@ function calculateCloseEngine(pos, execs, currentPrice, overrideThreshold=NaN){
   const sideText = isShort ? 'SHORT' : 'LONG';
   const openAction = isShort ? 'Open Short' : 'Open Long';
   const closeAction = isShort ? 'Close Short' : 'Close Long';
-  const threshold = Number.isFinite(overrideThreshold) ? overrideThreshold : pos.avg;
-  if(!threshold) throw new Error('Position entry price is empty.');
-  const qualifies = e => isShort ? e._price >= threshold : e._price <= threshold;
+
+  // Slider threshold = desired entry-layer threshold.
+  // For actual close-now-in-profit calculation, it must never include entries
+  // that are not profitable at the current market price.
+  const threshold = Number.isFinite(overrideThreshold) ? overrideThreshold : currentPrice;
+  if(!threshold) throw new Error('Threshold/current price is empty.');
+  const effectiveThreshold = isShort ? Math.max(threshold, currentPrice) : Math.min(threshold, currentPrice);
+
+  const qualifies = e => isShort ? e._price >= effectiveThreshold : e._price <= effectiveThreshold;
   const openRows = execs.filter(e=>e._action===openAction && qualifies(e));
   const firstTime = openRows.length ? Math.min(...openRows.map(e=>e._time)) : NaN;
   const closeRowsAll = Number.isFinite(firstTime) ? execs.filter(e=>e._action===closeAction && e._time>=firstTime) : [];
@@ -291,10 +297,10 @@ function calculateCloseEngine(pos, execs, currentPrice, overrideThreshold=NaN){
   const closedRaw=closeRowsAll.reduce((s,e)=>s+(e._closedSize>0?e._closedSize:e._qty),0);
   const closedQty=Math.min(grossQty, closedRaw);
   const remainingLayer=Math.max(0, grossQty-closedQty);
-  const currentProfitable = isShort ? currentPrice <= threshold : currentPrice >= threshold;
-  const canCloseQty = currentProfitable ? Math.min(remainingLayer, pos.size) : 0;
+  const canCloseQty = Math.min(remainingLayer, pos.size);
   const pnl = canCloseQty * (isShort ? (avg-currentPrice) : (currentPrice-avg));
-  return {isShort, sideText, openAction, closeAction, threshold, openRows, closeRowsAll, grossQty, grossValue, avg, firstTime, closedRaw, closedQty, remainingLayer, currentProfitable, canCloseQty, pnl};
+  const currentProfitable = canCloseQty > 0 && (isShort ? currentPrice <= avg : currentPrice >= avg);
+  return {isShort, sideText, openAction, closeAction, threshold, effectiveThreshold, openRows, closeRowsAll, grossQty, grossValue, avg, firstTime, closedRaw, closedQty, remainingLayer, currentProfitable, canCloseQty, pnl};
 }
 function renderRows(tbodyId, rows, isClose=false){
   const body=$(tbodyId);
@@ -319,8 +325,8 @@ function updateUI(pos, last, data, meta){
   $('mPnl').textContent=fmt(data.pnl,2);
   const firstText=Number.isFinite(data.firstTime)?new Date(data.firstTime).toLocaleString():'—';
   const profitText=data.currentProfitable?'profitable / breakeven':'not profitable at current price';
-  $('summary').innerHTML = `${pos.symbol} <b>${data.sideText}</b>: price threshold <b>${fmt(data.threshold,8)}</b>, current price <b>${fmt(last,8)}</b>. The engine found <b>${fmt(data.grossQty,8)}</b> tokens opened in the profitable entry zone, then <b>${fmt(data.closedQty,8)}</b> tokens already closed after the first matching entry. Estimated remaining layer: <b>${fmt(data.remainingLayer,8)}</b>. Current open position size: <b>${fmt(pos.size,8)}</b>. You can close up to <b>${fmt(data.canCloseQty,8)}</b> tokens now in +/BE by this model. Status: <b>${profitText}</b>. Estimated PnL: <b>${fmt(data.pnl,2)} USDT</b>, excluding fees and funding.`;
-  $('small').innerHTML = `<span>Engine: <b class="ok">1.0</b></span><span>Rule: <b class="ok">${data.openAction} ${data.isShort?'price ≥ threshold':'price ≤ threshold'}</b></span><span>First matching entry: <b class="ok">${firstText}</b></span><span>API chunks: <b class="ok">${meta.chunks.length}</b></span><span>Executions scanned: <b class="ok">${meta.sorted.length}</b></span><span>Lookback days: <b class="ok">${Math.floor(decInput('lookbackDays',365))}</b></span>`;
+  $('summary').innerHTML = `${pos.symbol} <b>${data.sideText}</b>: slider threshold <b>${fmt(data.threshold,8)}</b>, effective profit threshold <b>${fmt(data.effectiveThreshold,8)}</b>, current price <b>${fmt(last,8)}</b>. The engine found <b>${fmt(data.grossQty,8)}</b> tokens opened in the profitable entry zone, then <b>${fmt(data.closedQty,8)}</b> tokens already closed after the first matching entry. Estimated remaining layer: <b>${fmt(data.remainingLayer,8)}</b>. Current open position size: <b>${fmt(pos.size,8)}</b>. You can close up to <b>${fmt(data.canCloseQty,8)}</b> tokens now in +/BE by this model. Status: <b>${profitText}</b>. Estimated PnL: <b>${fmt(data.pnl,2)} USDT</b>, excluding fees and funding.`;
+  $('small').innerHTML = `<span>Engine: <b class="ok">1.1</b></span><span>Rule: <b class="ok">${data.openAction} ${data.isShort?'price ≥ effective threshold':'price ≤ effective threshold'}</b></span><span>First matching entry: <b class="ok">${firstText}</b></span><span>API chunks: <b class="ok">${meta.chunks.length}</b></span><span>Executions scanned: <b class="ok">${meta.sorted.length}</b></span><span>Lookback days: <b class="ok">${Math.floor(decInput('lookbackDays',365))}</b></span>`;
   renderRows('openBody', data.openRows, false);
   renderRows('closeBody', data.closeRowsAll, true);
 }
@@ -348,9 +354,9 @@ function configureThresholdSlider(pos, execs, currentPrice){
   $('thresholdSlider').min = String(lo);
   $('thresholdSlider').max = String(hi);
   $('thresholdSlider').step = String(step);
-  $('thresholdSlider').value = String(pos.avg);
-  $('thresholdInput').value = String(pos.avg);
-  $('thresholdLabel').textContent = fmt(pos.avg,8);
+  $('thresholdSlider').value = String(currentPrice);
+  $('thresholdInput').value = String(currentPrice);
+  $('thresholdLabel').textContent = fmt(currentPrice,8);
   setSliderEnabled(true);
 }
 function recalcFromState(){
