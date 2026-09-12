@@ -239,22 +239,25 @@ function separateStage(){
   for(let i=0;i<18;i++)parts.push({x:r.x,y:r.y,vx:(Math.random()-.5)*8,vy:Math.random()*4,life:.6,max:.6,s:3+Math.random()*5,c:'#cfd8e6'});
 }
 
-/* Camera: camX/camY is the WORLD point drawn at screen center.
-   Rocket sits left-of-center so you see space ahead. */
+/* camX/camY = world point at screen center. */
 function camTargets(){
-  const lookX=.32, lookY=state==='RESULT'?.55:.42;
+  const flying=state==='FLYING';
+  const lookX=flying?0.30:0.38;
+  const lookY=state==='RESULT'?0.52:(flying?0.40:0.62);
+  const ax=state==='AIMING'?anchor.x:r.x;
+  const ay=state==='AIMING'?anchor.y:r.y;
+  const leadX=flying?r.vx*20:0;
+  const leadY=flying?r.vy*14:0;
   return {
-    x:r.x-(lookX-0.5)*W/zoom,
-    y:r.y-(lookY-0.5)*H/zoom
+    x:ax+leadX-(lookX-0.5)*W/zoom,
+    y:ay+leadY-(lookY-0.5)*H/zoom
   };
 }
 function followCam(dt,hard){
   const t=camTargets();
-  const k=hard?1:Math.min(1,dt*7);
-  camX+= (t.x-camX)*k;
-  camY+= (t.y-camY)*k;
-  const err=Math.hypot(t.x-camX,t.y-camY);
-  if(err>220/zoom){camX=t.x;camY=t.y}
+  const k=hard?1:Math.min(1,1-Math.exp(-dt*(state==='FLYING'?16:9)));
+  camX+=(t.x-camX)*k;
+  camY+=(t.y-camY)*k;
 }
 function worldToScreen(wx,wy){
   return {x:W/2+(wx-camX)*zoom,y:H/2+(wy-camY)*zoom};
@@ -317,8 +320,8 @@ function physics(dt){
     followCam(dt,true);
   }
 
-  const tZoom=Math.max(.7,Math.min(1.05,1-sp/110*.28));
-  zoom+=(tZoom-zoom)*.06;
+  const tZoom=Math.max(.82,Math.min(1.05,1-sp/140*.18));
+  zoom+=(tZoom-zoom)*.04;
   followCam(dt,false);
   shake*=.86;
 
