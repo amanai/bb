@@ -4,62 +4,72 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Rocket Sling</title>
 <style>
-:root{--glass:rgba(8,16,28,.78);--line:#ffffff22;--muted:#cfe4ffb8}
-*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#07111f;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+:root{--glass:rgba(8,16,28,.82);--line:#ffffff24;--muted:#cfe4ffb8}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#07111f;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 canvas{position:fixed;inset:0;width:100%;height:100%;touch-action:none}
-.glass{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 10px 30px #0005}
-#hud{position:fixed;z-index:5;left:8px;right:8px;top:max(8px,env(safe-area-inset-top));display:flex;gap:6px;pointer-events:none;flex-wrap:wrap}
-.stat{padding:6px 8px;border-radius:12px;display:flex;gap:6px;align-items:center;font-weight:800;font-size:12px;white-space:nowrap}
-.stat small{display:block;color:var(--muted);font-size:8px;text-transform:uppercase;letter-spacing:.08em}
-.stat b{font-size:13px}.grow{flex:1}
-#bars{position:fixed;z-index:4;left:12px;right:12px;top:62px;display:flex;flex-direction:column;gap:5px;opacity:0;transition:.2s;pointer-events:none}
-#bars.on{opacity:1}
-.bar{height:6px;border-radius:99px;background:#ffffff16;overflow:hidden}
-.bar i{display:block;height:100%;width:100%;border-radius:99px}
-#fuel i{background:linear-gradient(90deg,#ffd86f,#ff7848)}
-#spd{position:fixed;z-index:4;left:12px;top:86px;font-size:11px;font-weight:800;color:#d9efffcc;opacity:0;pointer-events:none}
-#hint{position:fixed;z-index:4;left:50%;bottom:132px;transform:translateX(-50%);padding:10px 14px;border-radius:999px;font-size:13px;font-weight:750;white-space:nowrap;max-width:88vw;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
-#shopBtn{position:fixed;z-index:8;right:12px;bottom:max(12px,env(safe-area-inset-bottom));border:1px solid var(--line);padding:11px 14px;border-radius:15px;background:var(--glass);color:#fff;font-weight:850}
+.glass{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 8px 24px #0004}
+
+#hud{
+  position:fixed;z-index:5;left:8px;right:8px;
+  top:max(10px,env(safe-area-inset-top));
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
+  pointer-events:none;
+}
+.stat{padding:7px 6px 6px;border-radius:12px;min-width:0}
+.stat small{display:block;color:var(--muted);font-size:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat b{display:block;font-size:13px;font-weight:900;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+#flightHud{
+  position:fixed;z-index:5;left:8px;right:8px;
+  top:calc(max(10px,env(safe-area-inset-top)) + 52px);
+  display:none;gap:8px;align-items:center;pointer-events:none;
+}
+#flightHud.on{display:flex}
+.bar{flex:1;height:7px;border-radius:99px;background:#ffffff18;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,#ffd86f,#ff7848);transition:width .05s linear}
+#spd{font-size:11px;font-weight:800;color:#e7f4ff;white-space:nowrap;min-width:118px;text-align:right}
+
+#hint{position:fixed;z-index:4;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:10px 14px;border-radius:999px;font-size:13px;font-weight:750;white-space:nowrap;max-width:88vw;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+#shopBtn{position:fixed;z-index:8;right:12px;bottom:max(14px,calc(12px + env(safe-area-inset-bottom)));border:1px solid var(--line);padding:11px 14px;border-radius:15px;background:var(--glass);color:#fff;font-weight:850}
 .badge{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:50%;margin-left:5px;background:#e7f7ff;color:#102238;font-size:11px}
-#shop{position:fixed;z-index:9;left:8px;right:8px;bottom:8px;max-height:62vh;border-radius:24px 24px 18px 18px;padding:12px;transform:translateY(calc(100% + 24px));transition:.25s;overflow:auto}
+#shop{position:fixed;z-index:9;left:8px;right:8px;bottom:8px;max-height:58vh;border-radius:24px 24px 18px 18px;padding:12px;padding-bottom:max(12px,env(safe-area-inset-bottom));transform:translateY(calc(100% + 24px));transition:.25s;overflow:auto}
 #shop.open{transform:none}
 #shopHead{display:flex;justify-content:space-between;align-items:center;margin:0 3px 10px}
 #shopHead strong{font-size:17px}#shopHead span{font-size:11px;color:var(--muted)}
 #close{border:0;background:#ffffff12;color:#fff;border-radius:10px;width:34px;height:34px;font-size:20px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.up{min-height:108px;border:1px solid #ffffff14;border-radius:16px;background:linear-gradient(180deg,#1a3c5b,#11263c);color:#fff;text-align:left;padding:11px}
+.up{min-height:100px;border:1px solid #ffffff14;border-radius:16px;background:linear-gradient(180deg,#1a3c5b,#11263c);color:#fff;text-align:left;padding:11px}
 .up.afford{box-shadow:inset 0 0 0 1px #9be7ff55}
 .up:disabled{opacity:.4}
-.r{display:flex;justify-content:space-between;gap:6px}
+.row{display:flex;justify-content:space-between;gap:6px}
 .name{font-size:13px;font-weight:900}
 .lvl{font-size:9px;background:#ffffff10;padding:3px 6px;border-radius:99px}
 .desc{font-size:11px;color:var(--muted);margin-top:6px}
-.price{font-size:13px;font-weight:900;margin-top:10px}
-#result{position:fixed;z-index:10;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);width:min(360px,90vw);padding:16px;border-radius:22px;opacity:0;pointer-events:none;transition:.2s}
-#result.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.price{font-size:13px;font-weight:900;margin-top:8px}
+
+#result{position:fixed;z-index:10;left:8px;right:8px;bottom:max(10px,env(safe-area-inset-bottom));transform:translateY(120%);width:auto;padding:14px;border-radius:22px;opacity:0;pointer-events:none;transition:.22s}
+#result.show{opacity:1;pointer-events:auto;transform:none}
 #result small{color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:800}
-#result .d{font-size:36px;font-weight:950;line-height:1;margin:8px 0 10px}
+#result .d{font-size:28px;font-weight:950;line-height:1.1;margin:6px 0 10px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .stats div{background:#ffffff0e;border-radius:12px;padding:8px 10px}
 .stats b{display:block;font-size:15px}
 .stats span{font-size:10px;color:var(--muted);text-transform:uppercase}
 button{font:inherit}.primary{width:100%;border:0;border-radius:14px;padding:13px;background:#eef9ff;color:#0a1a2a;font-weight:900}
-@media(max-height:650px){#hint{bottom:82px}#shop{max-height:70vh}}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="hud">
-  <div class="stat glass">💰 <span><small>Баланс</small><b id="money">0</b></span></div>
-  <div class="stat glass">📏 <span><small>Дистанция</small><b><span id="dist">0</span></b></span></div>
-  <div class="stat glass">⛰️ <span><small>Высота</small><b><span id="alt">0</span></b></span></div>
-  <div class="grow"></div>
-  <div class="stat glass">🏆 <span><small>Рекорд</small><b><span id="best">0</span></b></span></div>
+  <div class="stat glass"><small>Баланс</small><b id="money">0</b></div>
+  <div class="stat glass"><small>Дистанция</small><b id="dist">0 м</b></div>
+  <div class="stat glass"><small>Высота</small><b id="alt">0 м</b></div>
+  <div class="stat glass"><small>Рекорд</small><b id="best">0 м</b></div>
 </div>
-<div id="bars"><div class="bar" id="fuel"><i></i></div></div>
-<div id="spd"></div>
+<div id="flightHud"><div class="bar" id="fuel"><i></i></div><div id="spd"></div></div>
 <div id="hint" class="glass">↙ Потяни ракету назад и отпусти</div>
 <button id="shopBtn">Улучшения <span class="badge" id="badge">0</span></button>
 <section id="shop" class="glass">
@@ -88,11 +98,11 @@ button{font:inherit}.primary{width:100%;border:0;border-radius:14px;padding:13px
 const c=document.getElementById('c'),ctx=c.getContext('2d'),$=s=>document.getElementById(s);
 let W,H,D,ground,last=performance.now();
 let camX=0,camY=0,zoom=1,shake=0;
-let drag=false,state='READY',earned=0,maxAlt=0,maxSpd=0,flightAlt=0;
-let parts=[],debris=[],clouds=[],pickups=[],stars=[];
+let drag=false,state='READY',earned=0,maxAlt=0,maxSpd=0;
+let parts=[],debris=[],clouds=[],stars=[];
 function resize(){
   D=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;
-  c.width=W*D;c.height=H*D;ctx.setTransform(D,0,0,D,0,0);ground=H*.82;
+  c.width=W*D;c.height=H*D;ctx.setTransform(D,0,0,D,0,0);ground=H*.78;
 }
 resize();addEventListener('resize',resize);
 
@@ -125,27 +135,27 @@ function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
 
 function seedWorld(){
   clouds=[];
-  for(let i=0;i<40;i++)clouds.push({x:Math.random()*8000-200,y:ground-400-Math.random()*1800,s:.6+Math.random()*1.4,a:.18+Math.random()*.2});
+  for(let i=0;i<40;i++)clouds.push({x:Math.random()*12000-200,y:ground-350-Math.random()*2200,s:.6+Math.random()*1.4,a:.16+Math.random()*.22});
   stars=[];
   for(let i=0;i<90;i++)stars.push({x:Math.random()*4000,y:Math.random()*3000,r:.5+Math.random()*1.4,a:.2+Math.random()*.6});
 }
 
 function start(){
   anchor={x:Math.max(92,Math.min(130,W*.22)),y:ground-28};
-  const mass=1/(1+up.w*.08);
   r={
     x:anchor.x,y:anchor.y,vx:0,vy:0,angle:0,
     flying:false,fuel:0,
     maxFuel:1.85+up.f*.7+up.s*.22,
     stagesLeft:up.s,
-    stagesTotal:up.s,
-    mass
+    mass:1/(1+up.w*.08)
   };
-  drag=false;state='READY';earned=0;maxAlt=0;maxSpd=0;flightAlt=0;
-  camX=camY=0;zoom=1;parts=[];debris=[];pickups=[];
+  drag=false;state='READY';earned=0;maxAlt=0;maxSpd=0;
+  zoom=1;parts=[];debris=[];
   seedWorld();
-  $('hint').style.opacity=1;$('bars').classList.remove('on');$('spd').style.opacity=0;
-  $('result').classList.remove('show');$('shop').classList.remove('open');$('shopBtn').style.display='block';
+  camX=r.x;camY=r.y;
+  $('hint').style.opacity=1;$('flightHud').classList.remove('on');
+  $('result').classList.remove('show');$('shop').classList.remove('open');
+  $('shopBtn').style.display='block';
   ui();
 }
 
@@ -156,6 +166,11 @@ function ui(){
   $('dist').textContent=fmtDist(dist);
   $('alt').textContent=fmtDist(alt);
   $('best').textContent=fmtDist(best);
+  if(state==='FLYING'){
+    const sp=Math.hypot(r.vx,r.vy);
+    $('spd').textContent=Math.floor(sp*18)+' км/ч · '+zoneName(alt);
+    $('fuel').firstElementChild.style.width=(Math.max(0,r.fuel)/r.maxFuel*100)+'%';
+  }
   let n=0;
   for(let k in meta){
     const p=price(k),ok=money>=p&&state!=='FLYING';
@@ -163,7 +178,7 @@ function ui(){
     const id={f:'uf',e:'ue',s:'us',a:'ua',l:'ul',w:'uw'}[k];
     $(id).disabled=!ok;
     $(id).classList.toggle('afford',ok);
-    $(id).innerHTML=`<div class="r"><div class="name">${meta[k][0]} ${meta[k][1]}</div><div class="lvl">ур. ${up[k]}</div></div><div class="desc">${meta[k][2]}</div><div class="price">💰 ${p}</div>`;
+    $(id).innerHTML=`<div class="row"><div class="name">${meta[k][0]} ${meta[k][1]}</div><div class="lvl">ур. ${up[k]}</div></div><div class="desc">${meta[k][2]}</div><div class="price">💰 ${p}</div>`;
   }
   $('badge').textContent=n;
 }
@@ -183,12 +198,15 @@ function ptr(e){const q=c.getBoundingClientRect();return{x:e.clientX-q.left,y:e.
 c.onpointerdown=e=>{
   if(state!=='READY'||$('shop').classList.contains('open'))return;
   const q=ptr(e);
-  if(Math.hypot(q.x-r.x,q.y-r.y)<100){drag=true;state='AIMING';c.setPointerCapture(e.pointerId)}
+  if(Math.hypot(q.x-worldToScreen(r.x,r.y).x,q.y-worldToScreen(r.x,r.y).y)<110){
+    drag=true;state='AIMING';c.setPointerCapture(e.pointerId);
+  }
 };
 c.onpointermove=e=>{
   if(!drag)return;
   const q=ptr(e);
-  let dx=Math.min(28,q.x-anchor.x),dy=q.y-anchor.y;
+  const w=screenToWorld(q.x,q.y);
+  let dx=Math.min(28,w.x-anchor.x),dy=w.y-anchor.y;
   const m=Math.hypot(dx,dy),mx=Math.min(158,W*.36);
   if(m>mx){dx*=mx/m;dy*=mx/m}
   r.x=anchor.x+dx;r.y=anchor.y+dy;
@@ -202,7 +220,8 @@ function release(){
   r.vx=Math.max(5.8,dx*pow+6.2);
   r.vy=dy*pow-3.4;
   r.flying=true;r.fuel=r.maxFuel;state='FLYING';
-  $('hint').style.opacity=0;$('bars').classList.add('on');$('spd').style.opacity=1;
+  $('hint').style.opacity=0;$('flightHud').classList.add('on');
+  $('shopBtn').style.display='none';
   buzz(20);ui();
 }
 c.onpointerup=release;c.onpointercancel=release;
@@ -215,23 +234,47 @@ function spawnFlame(){
   });
 }
 function separateStage(){
-  debris.push({
-    x:r.x,y:r.y,vx:r.vx*.6-1.2,vy:r.vy*.4+1.4,angle:r.angle,spin:.08,life:4
-  });
+  debris.push({x:r.x,y:r.y,vx:r.vx*.6-1.2,vy:r.vy*.4+1.4,angle:r.angle,spin:.08,life:4});
   buzz(30);
-  for(let i=0;i<18;i++)parts.push({
-    x:r.x,y:r.y,vx:(Math.random()-.5)*8,vy:Math.random()*4,
-    life:.6,max:.6,s:3+Math.random()*5,c:'#cfd8e6'
-  });
+  for(let i=0;i<18;i++)parts.push({x:r.x,y:r.y,vx:(Math.random()-.5)*8,vy:Math.random()*4,life:.6,max:.6,s:3+Math.random()*5,c:'#cfd8e6'});
+}
+
+/* Camera: camX/camY is the WORLD point drawn at screen center.
+   Rocket sits left-of-center so you see space ahead. */
+function camTargets(){
+  const lookX=.32, lookY=state==='RESULT'?.55:.42;
+  return {
+    x:r.x-(lookX-0.5)*W/zoom,
+    y:r.y-(lookY-0.5)*H/zoom
+  };
+}
+function followCam(dt,hard){
+  const t=camTargets();
+  const k=hard?1:Math.min(1,dt*7);
+  camX+= (t.x-camX)*k;
+  camY+= (t.y-camY)*k;
+  const err=Math.hypot(t.x-camX,t.y-camY);
+  if(err>220/zoom){camX=t.x;camY=t.y}
+}
+function worldToScreen(wx,wy){
+  return {x:W/2+(wx-camX)*zoom,y:H/2+(wy-camY)*zoom};
+}
+function screenToWorld(sx,sy){
+  return {x:camX+(sx-W/2)/zoom,y:camY+(sy-H/2)/zoom};
 }
 
 function physics(dt){
-  if(state!=='FLYING'){
-    if(state==='READY')r.angle=Math.sin(performance.now()/380)*.06;
+  if(state==='READY'){
+    r.angle=Math.sin(performance.now()/380)*.06;
+    followCam(dt,false);
     return;
   }
+  if(state==='AIMING'){followCam(dt,false);return;}
+  if(state==='RESULT'){followCam(dt,false);shake*=.86;return;}
+  if(state!=='FLYING')return;
+
   const alt=Math.max(0,(ground-28-r.y)/2.2);
-  flightAlt=alt;maxAlt=Math.max(maxAlt,alt);
+  maxAlt=Math.max(maxAlt,alt);
   const dens=airDensity(alt);
   const sp=Math.hypot(r.vx,r.vy);
   maxSpd=Math.max(maxSpd,sp*18);
@@ -260,25 +303,23 @@ function physics(dt){
   const pay=Math.floor(dist*.2+alt*.08+maxSpd*.004);
   if(pay>earned){money+=pay-earned;earned=pay}
 
-  $('fuel').firstElementChild.style.width=Math.max(0,r.fuel)/r.maxFuel*100+'%';
-  $('spd').textContent=Math.floor(sp*18)+' км/ч  ·  '+zoneName(alt);
-
   if(r.y>=ground-18 && r.vy>0){
     r.y=ground-18;r.vx=r.vy=0;r.flying=false;state='RESULT';
-    $('bars').classList.remove('on');$('spd').style.opacity=0;
+    $('flightHud').classList.remove('on');
     $('rd').textContent=fmtDist(dist);
     $('ra').textContent=fmtDist(maxAlt);
     $('rs').textContent=Math.floor(maxSpd)+' км/ч';
     $('re').textContent=earned+' 💰';
     $('rz').textContent=zoneName(maxAlt);
     $('result').classList.add('show');
-    shake=.8;buzz(40);persist();ui();
+    $('shopBtn').style.display='block';
+    shake=.8;buzz(40);persist();
+    followCam(dt,true);
   }
 
-  const tZoom=Math.max(.72,1-sp/90*.25);
-  zoom+=(tZoom-zoom)*.04;
-  camX+=(Math.max(0,r.x-W*.34/zoom)-camX)*.08;
-  camY+=(Math.min(0,r.y-H*.38/zoom)-camY)*.06;
+  const tZoom=Math.max(.7,Math.min(1.05,1-sp/110*.28));
+  zoom+=(tZoom-zoom)*.06;
+  followCam(dt,false);
   shake*=.86;
 
   for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.life-=dt;p.x+=p.vx;p.y+=p.vy;p.vy+=.04;if(p.life<=0)parts.splice(i,1)}
@@ -357,27 +398,27 @@ function draw(){
   for(const s of stars){
     ctx.globalAlpha=s.a*starA;
     ctx.fillStyle='#fff';
-    ctx.beginPath();ctx.arc(((s.x-camX*.08)%(W+40)+W+40)%(W+40)-20, (s.y%(H+40)), s.r,0,7);ctx.fill();
+    ctx.beginPath();ctx.arc(((s.x-camX*.08)%(W+40)+W+40)%(W+40)-20,(s.y%(H+40)),s.r,0,7);ctx.fill();
   }
   ctx.restore();
 
-  const sx=(shake? (Math.random()-.5)*shake*6:0);
-  const sy=(shake? (Math.random()-.5)*shake*6:0);
+  const sx=shake?(Math.random()-.5)*shake*6:0;
+  const sy=shake?(Math.random()-.5)*shake*6:0;
   ctx.save();
   ctx.translate(W/2+sx,H/2+sy);
   ctx.scale(zoom,zoom);
-  ctx.translate(-W/2-camX,-H/2-camY);
+  ctx.translate(-camX,-camY);
 
-  // mountains
+  const viewL=camX-W*.6/zoom, viewR=camX+W*.6/zoom;
+
   ctx.fillStyle='#1b3a4e';
-  ctx.beginPath();ctx.moveTo(camX-200,ground);
-  for(let i=0;i<30;i++){
-    const mx=camX-200+i*220;
+  ctx.beginPath();ctx.moveTo(viewL-200,ground);
+  for(let i=0;i<36;i++){
+    const mx=viewL-200+i*220;
     ctx.lineTo(mx,ground-80-Math.sin(i*1.7)*40-((i*97)%50));
   }
-  ctx.lineTo(camX+W+800,ground);ctx.closePath();ctx.fill();
+  ctx.lineTo(viewR+400,ground);ctx.closePath();ctx.fill();
 
-  // clouds
   ctx.fillStyle='#ffffff';
   for(const cl of clouds){
     ctx.globalAlpha=cl.a;
@@ -390,14 +431,15 @@ function draw(){
   }
   ctx.globalAlpha=1;
 
-  // ground
   ctx.fillStyle='#173f2b';
-  ctx.fillRect(camX-400,ground,W/zoom+camX+6000,H+1200);
+  ctx.fillRect(viewL-400,ground,viewR-viewL+1200,H/zoom+1600);
   ctx.fillStyle='#275b3e';
-  ctx.fillRect(camX-400,ground,W/zoom+camX+6000,6);
+  ctx.fillRect(viewL-400,ground,viewR-viewL+1200,6);
 
   ctx.font='11px system-ui';ctx.fillStyle='#d9efffaa';ctx.strokeStyle='#d9efff44';
-  for(let mx=anchor.x;mx<camX+W/zoom+800;mx+=250){
+  const step=250;
+  const startM=Math.floor(viewL/step)*step;
+  for(let mx=startM;mx<viewR+400;mx+=step){
     ctx.beginPath();ctx.moveTo(mx,ground);ctx.lineTo(mx,ground-16);ctx.stroke();
     ctx.fillText(fmtDist(Math.max(0,(mx-anchor.x)/5)),mx+4,ground-5);
   }
@@ -432,8 +474,7 @@ function draw(){
 
 function loop(t){
   const dt=Math.min(.033,(t-last)/1000);last=t;
-  physics(dt);draw();
-  if(state!=='FLYING')ui();
+  physics(dt);draw();ui();
   requestAnimationFrame(loop);
 }
 start();requestAnimationFrame(loop);
