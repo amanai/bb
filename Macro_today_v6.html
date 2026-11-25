@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://apps.bea.gov https://www.bea.gov https://fred.stlouisfed.org https://alfred.stlouisfed.org https://api.cors.lol https://proxy.cors.dev; base-uri 'none'; form-action 'none'">
+  <meta name="color-scheme" content="dark">
+  <title>Макросигнал BTC · 25 ноября 2026</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101722; --surface:#182230; --edge:#364356; --soft:#aebbd0; --fg:#f0f4f8; --pos:#7cddb0; --neg:#ff9caa; --mixed:#f2ca86; --link:#a7cdfc; }
+    * { box-sizing:border-box }
+    body { margin:0 auto; max-width:920px; padding:clamp(18px,4vw,42px) 16px 40px; color:var(--fg); background:var(--bg); font:16px/1.45 Inter,system-ui,-apple-system,sans-serif; font-variant-numeric:tabular-nums }
+    h1,h2,h3,p { margin:0 } h1 { font-size:clamp(1.65rem,5vw,2.45rem); line-height:1.15 }
+    .sub,small,.hint { color:var(--soft) } small,.hint { font-size:.84rem; line-height:1.45 }
+    .sub { margin:6px 0 18px } .card { background:var(--surface); border:1px solid var(--edge); border-radius:12px; padding:clamp(16px,4vw,26px) }
+    .eyebrow { font-size:.87rem; font-weight:650; color:var(--soft) } h2 { font-size:clamp(1.6rem,5vw,2.15rem); margin:3px 0 9px; line-height:1.18 }
+    .pos { color:var(--pos) } .neg { color:var(--neg) } .mixed { color:var(--mixed) } .neu { color:var(--soft) }
+    .scale { height:6px; background:var(--edge); border-radius:6px; position:relative; margin:14px 0 6px }
+    .scale::after { content:""; position:absolute; height:12px; width:2px; top:-3px; left:50%; background:var(--soft) }
+    #bar { display:block; position:absolute; height:100%; background:currentColor; border-radius:6px }
+    .ticks { display:flex; justify-content:space-between; color:var(--soft); font-size:.75rem }
+    #scoreDetails,#driver,#phaseNote { margin-top:5px } #driver:empty,#phaseNote:empty { display:none }
+    .action { display:flex; gap:.65rem; flex-wrap:wrap; align-items:center; margin:18px 0 6px }
+    button { border:1px solid #597084; border-radius:7px; padding:9px 13px; font:inherit; font-weight:600; cursor:pointer; background:#233243; color:var(--fg) }
+    #refresh { color:#102333; background:#add7fb; border-color:#add7fb } button:disabled { opacity:.65; cursor:default }
+    :focus-visible { outline:2px solid var(--link); outline-offset:3px }
+    #status,#storageNote { color:var(--soft); font-size:.88rem; margin:6px 0; overflow-wrap:anywhere }
+    h3 { font-size:1.15rem; margin-top:22px } .source-line { margin:4px 0 12px; font-size:.85rem; color:var(--soft) }
+    a { color:var(--link); text-underline-offset:3px } table { width:100%; border-collapse:collapse; text-align:left }
+    th,td { padding:10px 7px; border-bottom:1px solid var(--edge); vertical-align:top }
+    thead th { font-size:.85rem; font-weight:550; color:var(--soft) } tbody th { width:38%; font-weight:600 }
+    tbody th small,td small { display:block; font-weight:400; margin-top:3px } .indicator { color:var(--fg); text-decoration-color:#677f98 }
+    .points { font-weight:650 } .mobile-label { display:none } .signal-text { white-space:normal } .explain { margin:10px 0 0 }
+    details { border-top:1px solid var(--edge); margin-top:15px; padding-top:10px } summary { cursor:pointer; font-weight:600; width:fit-content }
+    details p,details ul { margin:8px 0; font-size:.9rem; color:var(--soft) } details ul { padding-left:20px }
+    .links { display:flex; gap:.5rem 1rem; flex-wrap:wrap }
+    [hidden] { display:none!important }
+    @media(max-width:610px) {
+      body { padding:20px 12px 34px } .card { padding:16px } .sub { font-size:.9rem }
+      .releases,.releases tbody { display:block } .releases thead { display:none }
+      .releases tr { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); gap:6px 9px; border-bottom:1px solid var(--edge); padding:10px 0 }
+      .releases th,.releases td { display:block; border:0; padding:0; width:auto }
+      .releases tbody th { grid-column:1/-1 } tbody th small { display:inline; margin-left:.4rem }
+      .mobile-label { display:block; font-size:.76rem; color:var(--soft); margin-bottom:3px } .signal-text { font-size:.81rem }
+      .points { display:inline-block; margin-top:6px }
+    }
+  
+    :root { --bg:#0b1015; --surface:#111b25; --edge:#293b4c; --soft:#93a5b9; --fg:#e9f0f8; --pos:#20d789; --neg:#ff5058; --mixed:#e9bb68; }
+    body { max-width:760px; padding:14px 12px 24px; font:14px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+    h1 {font-size:20px;letter-spacing:.04em} h2 {font-size:25px;margin:4px 0} h3 {font-size:16px;margin-top:14px}
+    .sub {margin:4px 0 12px;font-size:12px} .card {padding:14px;border-radius:12px;border:1px solid var(--edge)}
+    .action {margin:10px 0 4px} #refresh {background:#172735;color:var(--fg);border-color:var(--edge);width:100%;padding:10px} 
+    .releases {background:var(--surface);border:1px solid var(--edge);border-radius:10px;border-collapse:separate;border-spacing:0;overflow:hidden}
+    th,td {padding:9px 7px} tbody tr:last-child>* {border-bottom:0} tbody th {width:40%} .source-line,small,.hint,#status,#storageNote {font-size:11px} 
+    .scale {margin:9px 0 4px} details {margin-top:10px;padding-top:8px} .indicator {text-decoration:none} .points {font-size:15px}
+    @media(max-width:610px) {body{padding:12px 9px 20px}.card{padding:12px}.releases tr{padding:8px 10px;gap:4px 8px}.releases tbody th small{display:block;margin:2px 0 0}.releases tbody th{font-size:13px}.points{margin-top:0}.mobile-label{font-size:10px;margin-bottom:1px}.releases td small{font-size:10px}.signal-text{font-size:11px}}
+</style>
+</head>
+<body>
+  <main>
+    <h1>MACRO / BTC</h1>
+    <p class="sub">США · 25 ноября 2026 · <time datetime="2026-11-25T13:30:00Z">17:30 в Ереване</time> / 08:30 в Нью-Йорке</p>
+    <section class="card" aria-labelledby="overall">
+      <p class="eyebrow" id="context">Влияние релизов на BTC</p>
+      <h2 id="overall" aria-live="polite">Ожидание данных</h2>
+      <div id="scoreDetails"></div>
+      <div id="driver" class="hint"></div>
+      <div id="gauge" hidden aria-hidden="true"><div class="scale"><span id="bar"></span></div><div class="ticks"><span>−100</span><span>0</span><span>+100</span></div></div>
+      <p class="hint" id="phaseNote"></p>
+    </section>
+    <div class="action"><button id="refresh" type="button">Обновить данные</button></div>
+    <p id="status" role="status"></p>
+    <p id="storageNote" role="status"></p>
+    <h3 id="tableTitle">Показатели</h3>
+    <p class="source-line">Прогнозы на 20 ноября (не обновляются). <a href="https://www.usbank.com/content/dam/usbank/en/documents/pdfs/corporate-and-commercial-banking/econ-weekly-pdf-11-20-26.pdf#page=7" target="_blank" rel="noopener noreferrer">U.S. Bank, стр. 7</a></p>
+    <table class="releases" aria-labelledby="tableTitle"><thead><tr><th scope="col">Показатель</th><th scope="col">Прогноз</th><th scope="col">Факт</th><th scope="col">Вклад в баллах</th></tr></thead><tbody id="rows"></tbody></table>
+    <details><summary>Как считаются баллы</summary>
+      <p>Модель оценивает сюрприз относительно прогноза через ожидания ставки ФРС. Более низкая инфляция даёт плюс. Умеренно слабые ВВП и заказы, а также умеренный рост числа заявок относительно прогноза тоже дают плюс.</p>
+      <p>Вклад растёт пропорционально отклонению и ограничен весом строки. В таблице ниже указан сюрприз для полного веса. Месячная и годовая инфляция связаны между собой. Их общий вес ограничен 70 баллами.</p>
+      <table aria-label="Параметры модели"><thead><tr><th>Показатель</th><th>Вес</th><th>Отклонение</th></tr></thead><tbody id="weights"></tbody></table>
+      <p>При умеренном замедлении вклад положительный; при дальнейшем ухудшении он плавно снижается до отрицательного. Стресс или перегрев: отклонение ВВП на 1,5 п.п., заказов на 3 п.п. или заявок на 40 тыс.; также два показателя с отклонением от половины этих порогов в одну сторону.</p>
+      <p>Сумма от +20 — позитив, до −20 — негатив, между ними — нейтрально. При перегреве или стрессе положительный инфляционный вклад от +20 означает смешанный фон; при неположительном инфляционном вкладе — негатив. При неполных данных итог не определяется.</p>
+      <p>Веса и пороги экспертные. Баллы описывают макрофон. Историческая точность прогноза цены BTC по этой шкале не оценивалась.</p>
+    </details>
+    <details><summary>Источники данных</summary>
+      <p>Инфляция и вторая оценка ВВП — датированные публикации BEA. В день выпуска для инфляции также используются индексы BEA по встроенному персональному ключу. Публичные ряды FRED содержат заявки и заказы и служат резервом для инфляции. После дня выпуска используются датированные публикации и архивные ряды ALFRED в редакции на 25 ноября.</p>
+      <p>Запросы выполняются по кнопке. При ограничении доступа к публичным CSV скрипт пробует публичные сервисы cors.lol и cors.dev. Ключ уходит только в BEA и виден в исходном коде этого персонального файла.</p>
+      <p class="links"><a href="https://www.bea.gov/news/schedule/full">Календарь BEA</a><a href="https://oui.doleta.gov/unemploy/archive.asp">График DOL</a><a href="https://www.census.gov/manufacturing/m3/release_schedule.html">Календарь Census</a></p>
+    </details>
+    <noscript><p>Для расчёта откройте HTML в браузере с включённым JavaScript.</p></noscript>
+  </main>
+  <script>
+'use strict';
+const RELEASE = '2026-11-25';
+const OPEN = Date.parse('2026-11-25T08:30:00-05:00');
+const ARCHIVE = Date.parse('2026-11-26T00:00:00-05:00');
+const PCE_URL = 'https://www.bea.gov/news/2026/personal-income-and-outlays-october-2026';
+const GDP_URL = 'https://www.bea.gov/news/2026/gdp-second-estimate-and-corporate-profits-3rd-quarter-2026';
+const PCE_TITLE = 'Personal Income and Outlays, October 2026';
+const GDP_TITLE = 'GDP (Second Estimate) and Corporate Profits, 3rd Quarter 2026';
+const RELEASE_DATE_EN = 'November 25, 2026';
+const EMBEDDED_KEY = '965145FE-8814-4D6A-8093-1E5E53DAFEB6';
+const STORE = 'btc.macro.auto.2026-11-25.v1';
+const indicators = [
+  {id:'coreM', name:'Базовый PCE м/м', period:'Октябрь · %', series:'PCEPILFE', lag:1, forecast:0.3, weight:40, scale:0.2, direction:-1},
+  {id:'coreY', name:'Базовый PCE г/г', period:'Октябрь · %', series:'PCEPILFE', lag:12, forecast:3.2, weight:15, scale:0.3, direction:-1},
+  {id:'pceM',  name:'Общий PCE м/м', period:'Октябрь · %', series:'PCEPI', lag:1, forecast:0.3, weight:10, scale:0.2, direction:-1},
+  {id:'pceY',  name:'Общий PCE г/г', period:'Октябрь · %', series:'PCEPI', lag:12, forecast:3.8, weight:5, scale:0.3, direction:-1},
+  {id:'gdp',   name:'Реальный ВВП', period:'III квартал · 2-я оценка · % к/к в годовом темпе', forecast:3.5, weight:15, scale:0.5, direction:-1, stressGap:1.5},
+  {id:'claims',name:'Первичные заявки', period:'Неделя по 21 ноября · тыс. человек', series:'ICSA', forecast:200, weight:10, scale:20, direction:1, stressGap:40},
+  {id:'orders',name:'Заказы на товары длительного пользования', period:'Октябрь · % м/м', series:'DGORDER', lag:1, forecast:0.5, weight:5, scale:1, direction:-1, stressGap:3}
+];
+const totalWeight = indicators.reduce((n,r) => n + r.weight, 0);
+const byId = Object.fromEntries(indicators.map(r => [r.id, r]));
+const series = [...new Set(indicators.map(r => r.series).filter(Boolean))];
+const phase = (time = Date.now()) => time < OPEN ? 'before' : time < ARCHIVE ? 'live' : 'archive';
+const numberFormat = new Intl.NumberFormat('ru-RU', {maximumFractionDigits:6, useGrouping:false});
+const fmt = n => numberFormat.format(n === 0 ? 0 : n);
+const signed = n => n > 0 ? '+' + fmt(n) : fmt(n).replace('-', '−');
+const rounded = n => Math.sign(n) * Math.round(Math.abs(n) + 1e-9);
+const tone = {'Позитив':'pos', 'Негатив':'neg', 'Смешанный сигнал':'mixed'};
+const $ = id => document.getElementById(id);
+
+// Points are integer tenths. The displayed row values sum to the displayed total.
+function assess(row, actual, forecast) {
+  if (!Number.isFinite(actual) || !Number.isFinite(forecast)) return {points:null, stress:false, weak:0, hot:0};
+  const shock = Number((row.direction * (actual - forecast)).toFixed(9));
+  let fraction = Math.max(-1, Math.min(1, shock / row.scale));
+  let weak=0, hot=0;
+  if (row.stressGap !== undefined) {
+    weak = Math.max(0, shock / row.stressGap);
+    hot = Math.max(0, -shock / row.stressGap);
+    if (shock > row.scale) fraction = Math.max(-1, 1 - 2 * (shock-row.scale)/(row.stressGap-row.scale));
+    if (row.id === 'gdp' && actual <= 0) { weak=Math.max(1,weak); fraction=-1; }
+  }
+  return {points:rounded(fraction * row.weight * 10), stress:weak >= 1, weak, hot};
+}
+function verdict(points, conflict) {
+  if (points <= -200) return 'Негатив';
+  if (points >= 200) return conflict ? 'Смешанный сигнал' : 'Позитив';
+  return conflict ? 'Смешанный сигнал' : 'Нейтрально';
+}
+function summarize(parts) {
+  let sum=0, weight=0, count=0, inflation=0, weak=[], hot=[];
+  for (const row of indicators) {
+    const part=parts[row.id];
+    if (part.points === null) continue;
+    sum+=part.points; weight+=row.weight; count++;
+    if (row.stressGap !== undefined) { weak.push(part.weak); hot.push(part.hot); }
+    else inflation+=part.points;
+  }
+  const severe = xs => xs.some(x=>x>=1) || xs.filter(x=>x>=0.5).length>=2;
+  const stress=severe(weak), overheating=severe(hot);
+  const conflict=stress||overheating;
+  const rest=(totalWeight-weight)*10, low=sum-rest, high=sum+rest;
+  let label='Ожидание данных';
+  if(count===indicators.length) {
+    label=verdict(sum,conflict);
+    if(conflict && inflation>=200) label='Смешанный сигнал';
+    else if(conflict && inflation<=0) label='Негатив';
+  } else if(count) label='Итог пока не определён';
+  return {sum,weight,count,stress,overheating,low,high,label};
+}
+
+const origins = {press:'Релиз BEA', bea:'Индексы BEA', fred:'FRED', archive:'ALFRED · 25.11', fredRelay:'FRED', archiveRelay:'ALFRED · 25.11'};
+const priority = {press:4, bea:3, fred:2, archive:2, fredRelay:1, archiveRelay:1};
+const data = {};
+const stamp = new Intl.DateTimeFormat('ru-RU', {timeZone:'Asia/Yerevan',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+function validFact(r, v) {
+  return Number.isFinite(v) && (r.id === 'claims' ? v >= 0 : r.series?.startsWith('PCE') ? v > -100 : v >= -100);
+}
+function validOrigin(r, source) {
+  if (!Object.hasOwn(origins,source)) return false;
+  if (r.id === 'gdp') return source === 'press';
+  return r.series.startsWith('PCE') || (source !== 'press' && source !== 'bea');
+}
+function restore() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || '{}');
+    for (const r of indicators) {
+      const s = saved?.[r.id];
+      if (s && validOrigin(r,s.source) && validFact(r,s.actual) && Number.isFinite(s.at) && s.at >= OPEN && s.at <= Date.now() &&
+          (s.at < ARCHIVE || !['bea','fred','fredRelay'].includes(s.source))) data[r.id] = s;
+    }
+  } catch { /* The app still works when private browsing disables storage. */ }
+}
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify(data)); }
+  catch { $('storageNote').textContent = 'Данные доступны до закрытия страницы. Браузер отключил сохранение.'; }
+}
+function makeRows() {
+  for (const r of indicators) {
+    const tr = $('rows').insertRow();
+    tr.innerHTML = '<th scope="row"><a class="indicator" target="_blank" rel="noopener noreferrer"></a><small></small></th>' +
+      '<td><span class="mobile-label">Прогноз</span><span></span></td>' +
+      '<td><span class="mobile-label">Факт</span><strong></strong><small></small></td>' +
+      '<td><span class="mobile-label">Вклад</span><span class="points"></span><small></small></td>';
+    const [heading, fCell, aCell, impact] = tr.cells;
+    const link = heading.querySelector('a');
+    link.textContent = r.name;
+    link.href = r.id === 'gdp' ? GDP_URL : 'https://fred.stlouisfed.org/series/' + r.series;
+    heading.querySelector('small').textContent = r.period;
+    fCell.lastElementChild.textContent = fmt(r.forecast);
+    aCell.querySelector('strong').id = 'actual-' + r.id;
+    aCell.querySelector('small').id = 'source-' + r.id;
+    impact.querySelector('.points').id = 'points-' + r.id;
+    impact.querySelector('small').id = 'effect-' + r.id;
+    const params = $('weights').insertRow();
+    [r.name, fmt(r.weight), fmt(r.scale) + (r.id === 'claims' ? ' тыс.' : ' п.п.')].forEach(v => { params.insertCell().textContent = v; });
+  }
+}
+function render() {
+  const parts = {};
+  for (const r of indicators) {
+    const s = data[r.id], v = s?.actual ?? null;
+    const p = parts[r.id] = assess(r,v,r.forecast);
+    $('actual-' + r.id).textContent = s ? fmt(v) : '—';
+    $('source-' + r.id).textContent = s ? origins[s.source] + (['cors.lol','cors.dev'].includes(s.via) ? ' через ' + s.via : '') + ' · ' + stamp.format(s.at) : 'Ожидание данных';
+    const cell = $('points-' + r.id);
+    cell.textContent = p.points === null ? '—' : signed(p.points/10);
+    cell.className = 'points ' + (p.points > 0 ? 'pos' : p.points < 0 ? 'neg' : 'neu');
+    $('effect-' + r.id).textContent = p.stress ? 'Риск замедления' : p.hot >= 1 ? 'Риск перегрева' : p.points === null ? '' : p.points > 0 ? 'Позитив' : p.points < 0 ? 'Негатив' : 'Нейтрально';
+  }
+  const m = summarize(parts), partial = m.count < indicators.length;
+  const h = $('overall');
+  const uncertain = m.label === 'Итог пока не определён';
+  h.textContent = m.label + (partial && m.count > 0 && !uncertain ? ' · предварительно' : '');
+  h.className = tone[m.label] || 'neu';
+  $('context').textContent = phase() === 'archive' ? 'Архив выпуска 25 ноября' : 'Влияние релизов на BTC';
+  $('scoreDetails').textContent = m.count ? 'Баллы ' + signed(m.sum/10) + ' / ' + totalWeight + ' · учтено ' + m.count + ' из ' + indicators.length + ' (вес ' + m.weight + '%)' +
+    (partial ? '. Возможный итог от ' + signed(m.low/10) + ' до ' + signed(m.high/10) + '.' : '.') :
+    'Учтено 0 из ' + indicators.length + ' показателей.';
+  const largest = indicators.filter(r => parts[r.id].points).sort((a,b) => Math.abs(parts[b.id].points) - Math.abs(parts[a.id].points))[0];
+  $('driver').textContent = (m.stress ? 'Риск резкого замедления. ' : '') + (m.overheating ? 'Риск перегрева. ' : '') +
+    (largest ? 'Наибольший вклад — ' + largest.name + ' (' + signed(parts[largest.id].points/10) + ').' : '');
+  $('gauge').hidden = !m.count || uncertain;
+  $('bar').className = h.className;
+  $('bar').style.left = Math.min(50,50 + m.sum/20) + '%';
+  $('bar').style.width = Math.abs(m.sum/20) + '%';
+}
+const targets = {PCEPI:'2026-10-01', PCEPILFE:'2026-10-01', DGORDER:'2026-10-01', ICSA:'2026-11-21'};
+const firstBase = {PCEPI:12,PCEPILFE:12,DGORDER:1,ICSA:0};
+function back(date, months) {
+  const d = new Date(date + 'T00:00:00Z');
+  d.setUTCMonth(d.getUTCMonth() - months);
+  return d.toISOString().slice(0,10);
+}
+function seriesURL(id, archived) {
+  const url = new URL(archived ? 'https://alfred.stlouisfed.org/graph/alfredgraph.csv' : 'https://fred.stlouisfed.org/graph/fredgraph.csv');
+  url.searchParams.set('id', id);
+  if (archived) url.searchParams.set('vintage_date', RELEASE);
+  url.searchParams.set('cosd', back(targets[id], firstBase[id]));
+  url.searchParams.set('coed', targets[id]);
+  return url.href;
+}
+async function get(url, json=false) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {signal:controller.signal,cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',redirect:'error'});
+    if (!res.ok) throw Error(res.status === 404 ? 'публикация недоступна' : 'ошибка HTTP ' + res.status);
+    return await (json ? res.json() : res.text());
+  } finally { clearTimeout(timer); }
+}
+function decimal(value) {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const str = String(value).trim();
+  if (!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(str)) return null;
+  const n = Number(str);
+  return Number.isFinite(n) ? n : null;
+}
+// Both index levels must come from the same series and the same data vintage.
+function fromLevels(row, levels, target=targets[row.series]) {
+  const v = levels.get(target);
+  if (!Number.isFinite(v)) return null;
+  if (row.id === 'claims') return v >= 0 && Number.isInteger(v) ? v/1000 : null;
+  const base = levels.get(back(target,row.lag));
+  if (!(base > 0) || v < 0 || (row.series !== 'DGORDER' && v === 0)) return null;
+  return rounded((v-base)/base*1000) / 10;
+}
+function readCSV(text, id, vintage='') {
+  const lines = text.trim().replace(/^\uFEFF/,'').split(/\r?\n/);
+  const cols = lines.shift().split(',');
+  const expected = id + (vintage ? '_' + vintage.replaceAll('-','') : '');
+  if (cols.length !== 2 || !/^(?:observation_date|DATE)$/i.test(cols[0]) || cols[1] !== expected) throw Error('не совпала серия или редакция CSV');
+  const values = new Map();
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const fields = line.split(',');
+    if (fields.length !== 2 || !/^\d{4}-\d{2}-\d{2}$/.test(fields[0]) || values.has(fields[0])) throw Error('некорректная строка CSV');
+    const raw = fields[1].trim(), value = decimal(raw);
+    if (value === null && raw !== '' && raw !== '.') throw Error('нечисловое значение CSV');
+    values.set(fields[0],value);
+  }
+  return values;
+}
+function beaLevels(rows, code) {
+  const levels = new Map();
+  for (const row of rows) {
+    if (row?.SeriesCode !== code || row.TableName !== 'T20804') continue;
+    const m = /^(\d{4})M(0?[1-9]|1[0-2])$/.exec(row.TimePeriod);
+    if (!m) continue;
+    const raw = String(row.DataValue ?? '').trim();
+    const value = decimal(/^\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(raw) ? raw.replaceAll(',','') : raw);
+    const date = m[1] + '-' + m[2].padStart(2,'0') + '-01';
+    if (levels.has(date)) throw Error('дублирующаяся строка BEA');
+    levels.set(date,value);
+  }
+  return levels;
+}
+async function pceAPI(key) {
+  const q = new URLSearchParams({UserID:key,method:'GetData',datasetname:'NIPA',TableName:'T20804',Frequency:'M',Year:'2025,2026',ResultFormat:'JSON'});
+  const result = (await get('https://apps.bea.gov/api/data/?' + q, true))?.BEAAPI?.Results;
+  if (!Array.isArray(result?.Data)) throw Error('BEA не вернул таблицу');
+  const values = {};
+  for (const [id,code] of [['PCEPI','DPCERG'],['PCEPILFE','DPCCRG']]) {
+    const levels = beaLevels(result.Data,code);
+    for (const r of indicators.filter(r => r.series === id)) values[r.id] = fromLevels(r,levels);
+  }
+  return values;
+}
+
+const clean = s => (s || '').replace(/\s+/g,' ').trim();
+function releaseBody(html, title, date) {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  const doc = template.content;
+  const heading = [...doc.querySelectorAll('h1')].some(h => clean(h.textContent).toLowerCase() === title.toLowerCase());
+  const dated = clean(doc.querySelector('.field--name-field-release-date')?.textContent).endsWith(date);
+  const body = doc.querySelector('.release-body');
+  if (!heading || !dated || !body) throw Error('не подтверждены выпуск и дата');
+  return [...body.querySelectorAll('p')].map(p => clean(p.textContent));
+}
+function priceChange(fragment) {
+  if (!fragment) return null;
+  if (/^(?:was|remained) unchanged\b/i.test(fragment)) return 0;
+  const m = /^(increased|decreased)\s+(\d+(?:\.\d+)?)\s+percent\b/i.exec(fragment);
+  return m ? Number(m[2]) * (m[1].toLowerCase() === 'decreased' ? -1 : 1) : null;
+}
+function pceRelease(html, title=PCE_TITLE, date=RELEASE_DATE_EN, month='October') {
+  const paragraphs = releaseBody(html,title,date);
+  const result = {};
+  for (const [start,term] of [['From the preceding month','M'],['From the same month one year ago','Y']]) {
+    const p = paragraphs.find(s => s.toLowerCase().startsWith(start.toLowerCase() + ','));
+    if (!p) continue;
+    const heading = new RegExp('^' + start + ', the PCE price index(?: for ' + month + ')? (.*)$','i');
+    const headline = heading.exec(p);
+    if (!headline) continue;
+    result['pce' + term] = priceChange(headline[1]);
+    const core = /Excluding food and energy, the PCE price index (.*)$/i.exec(p);
+    result['core' + term] = priceChange(core?.[1]);
+  }
+  return result;
+}
+function gdpRelease(html, title=GDP_TITLE, date=RELEASE_DATE_EN, quarter='third quarter of 2026') {
+  const p = releaseBody(html,title,date)[0] || '';
+  if (!/according to the second estimate\b/i.test(p)) return null;
+  const pattern = new RegExp('^Real gross domestic product\\s*\\(GDP\\) (increased|decreased) at an annual rate of (\\d+(?:\\.\\d+)?) percent in the ' + quarter + '\\b','i');
+  const match = pattern.exec(p);
+  if (match) return Number(match[2]) * (match[1].toLowerCase() === 'decreased' ? -1 : 1);
+  return new RegExp('^Real gross domestic product\\s*\\(GDP\\) (?:was|remained) unchanged in the ' + quarter + '\\b','i').test(p) ? 0 : null;
+}
+
+function errorLabel(e) {
+  if (e.name === 'AbortError') return 'истекло время ожидания';
+  if (e instanceof TypeError) return 'сеть или ограничение браузера';
+  if (e instanceof SyntaxError) return 'некорректный ответ';
+  return e.message;
+}
+async function load() {
+  if ($('refresh').disabled) return;
+  if (phase() === 'before') {
+    $('status').textContent = 'Публикация 25 ноября в 17:30 по Еревану. Нажмите обновление после выхода данных.';
+    return;
+  }
+  $('refresh').disabled = true; $('status').textContent = 'Получаю данные выпуска…';
+  const updated = new Set(), notes = new Set();
+  function take(id, value, source, via='') {
+    if (!validFact(byId[id],value)) return;
+    if (phase() === 'archive' && ['bea','fred','fredRelay'].includes(source)) return;
+    if ((priority[data[id]?.source] || 0) > priority[source]) return;
+    data[id] = {actual:value,source,via,at:Date.now()};
+    updated.add(id); save(); render();
+  }
+  async function attempt(name, fn) {
+    try { await fn(); } catch (e) { notes.add(name + ' — ' + errorLabel(e)); }
+  }
+  async function csvSeries(id) {
+    const rows = indicators.filter(r => r.series === id && !updated.has(r.id));
+    if (!rows.length) return;
+    const archived = phase() === 'archive', url = seriesURL(id,archived);
+    let levels, via = '';
+    const read = async address => readCSV(await get(address),id,archived ? RELEASE : '');
+    try { levels = await read(url); }
+    catch {
+      try {
+        via = 'cors.lol';
+        levels = await read('https://api.cors.lol/?url=' + encodeURIComponent(url));
+      } catch {
+        via = 'cors.dev';
+        levels = await read('https://proxy.cors.dev/' + url);
+      }
+    }
+    let source = archived ? 'archive' : 'fred';
+    if (via) source += 'Relay';
+    for (const r of rows) take(r.id,fromLevels(r,levels),source,via);
+    if (rows.every(r => fromLevels(r,levels) === null)) notes.add(id + ' — нет данных за период');
+  }
+  async function inflation() {
+    const pce = indicators.filter(r => r.series?.startsWith('PCE'));
+    const jobs = [attempt('Публикация PCE',async () => {
+      let values = {};
+      for (const url of [PCE_URL, 'https://api.cors.lol/?url=' + encodeURIComponent(PCE_URL), 'https://proxy.cors.dev/' + PCE_URL]) {
+        try { values = pceRelease(await get(url)); if (Object.values(values).some(Number.isFinite)) break; } catch {}
+      }
+      for (const r of pce) take(r.id,values[r.id],'press');
+    })];
+    if (phase() === 'live') jobs.push(attempt('API BEA',async () => {
+      const values = await pceAPI(EMBEDDED_KEY);
+      for (const r of pce) take(r.id,values[r.id],'bea');
+    }));
+    await Promise.all(jobs);
+    await Promise.all(['PCEPILFE','PCEPI'].map(id => attempt(id,() => csvSeries(id))));
+  }
+  try {
+    await Promise.all([inflation(), attempt('ВВП',async () => {
+      let v = null;
+      for (const url of [GDP_URL, 'https://api.cors.lol/?url=' + encodeURIComponent(GDP_URL), 'https://proxy.cors.dev/' + GDP_URL]) {
+        try { v = gdpRelease(await get(url)); if (v !== null) break; } catch {}
+      }
+      if (v === null) throw Error('вторая оценка ещё не подтверждена');
+      take('gdp',v,'press');
+    }), ...['ICSA','DGORDER'].map(id => attempt(id,() => csvSeries(id)))]);
+    const previous = indicators.filter(r => data[r.id] && !updated.has(r.id)).length;
+    $('status').textContent = stamp.format(Date.now()) + ' (Ереван) · Обновлено ' + updated.size + ' из ' + indicators.length + '.' +
+      (previous ? ' Ранее полученных значений сохранено ' + previous + '.' : '') +
+      (updated.size < indicators.length && notes.size ? ' ' + [...notes].join('. ') + '.' : '');
+  } finally { $('refresh').disabled = false; render(); }
+}
+restore();
+makeRows();
+render();
+$('status').textContent = phase() === 'before' ? 'Публикация в 17:30 по Еревану. Обновление по кнопке.' :
+  Object.keys(data).length ? 'Показаны ранее полученные значения. Время получения указано рядом с фактом.' : 'Нажмите «Обновить данные», чтобы получить факты выпуска.';
+$('refresh').addEventListener('click',load);
+</script>
+</body>
+</html>
